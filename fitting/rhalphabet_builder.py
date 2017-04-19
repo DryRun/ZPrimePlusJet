@@ -372,11 +372,19 @@ class RhalphabetBuilder():
                 self._all_vars.append(pRooVar)
 
     def GetWorkspaceInputs(self, pass_histograms, fail_histograms,iBin):
+        # Protect against zero norm?
+        for background in ["wqq", "zqq", "tqq"]:
+            if pass_histograms[background].Integral() == 0:
+                print "[GetWorkspaceInputs] WARNING : Zero norm for histogram {}. Filling with (500, 1.e-10).".format(pass_histograms[background].GetName())
+                pass_histograms[background].Fill(500., 1.e-10)
+            if fail_histograms[background].Integral() == 0:
+                print "[GetWorkspaceInputs] WARNING : Zero norm for histogram {}. Filling with (500, 1.e-10).".format(fail_histograms[background].GetName())
+                fail_histograms[background].Fill(500., 1.e-10)
 
         roocategories = r.RooCategory("sample","sample") 
         roocategories.defineType("pass",1) 
         roocategories.defineType("fail",0) 
-        data_rdh_pass = r.RooDataHist("data_obs_pass_"+iBin,"data_obs_pass_"+iBin,r.RooArgList(self._lMSD),pass_histograms["data_obs"])
+        data_rdh_pass = r.RooDataHist("data_obs_pass_"+iBin,"data_obs_pass_"+iBin,r.RooArgList(self._lMSD), pass_histograms["data_obs"])
         data_rdh_fail = r.RooDataHist("data_obs_fail_"+iBin,"data_obs_fail_"+iBin,r.RooArgList(self._lMSD), fail_histograms["data_obs"])
         data_rdh_comb  = r.RooDataHist("comb_data_obs","comb_data_obs",r.RooArgList(self._lMSD),r.RooFit.Index(roocategories),r.RooFit.Import("pass",data_rdh_pass),r.RooFit.Import("fail",data_rdh_fail)) 
 
