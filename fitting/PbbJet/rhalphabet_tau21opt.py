@@ -9,7 +9,7 @@ tau21_values = [0.4, 0.45, 0.5, 0.525, 0.55, 0.575, 0.6, 0.65, 0.7]
 for tau_21 in tau21_values:
 	wp_string = "tau21ddt_{}".format(tau_21)
 	print wp_string
-	directory = "/uscms/home/dryu/DAZSLE/CMSSW_7_4_7/src/DAZSLE/ZPrimePlusJet/fitting/PbbJet/Xbb_inputs/{}".format(wp_string)
+	directory = "~/DAZSLE/data/LimitSetting/Xbb_inputs/{}".format(wp_string)
 
 	if step1:
 		os.system("mkdir -pv {}/cards_mcstat/".format(directory))
