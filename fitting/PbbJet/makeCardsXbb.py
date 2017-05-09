@@ -14,7 +14,7 @@ import array
 sys.path.insert(0, '../.')
 from tools import *
 
-from buildRhalphabetPbb import MASS_BINS,MASS_LO,MASS_HI,BLIND_LO,BLIND_HI,RHO_LO,RHO_HI
+from buildRhalphabetXbb import MASS_BINS,MASS_LO,MASS_HI,BLIND_LO,BLIND_HI,RHO_LO,RHO_HI
 from rhalphabet_builder import BB_SF,BB_SF_ERR,V_SF,V_SF_ERR,GetSF
 
 do_syst_mcstat=False
