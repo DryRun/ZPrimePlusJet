@@ -1,1 +1,0 @@
-ls: cannot access /eos/cms/store/group/phys_exotica/dijet/dazsle/zprimebits-v12.05/Spin0_ggPhibb1j_g1_500_Scalar/*root*: No such file or directory
