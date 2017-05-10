@@ -13,7 +13,7 @@ observation -1.0 -1.0
 ----------------------------------------------------------------------------------------------------------------------------------
 bin pass_CATX pass_CATX pass_CATX pass_CATX pass_CATX pass_CATX pass_CATX pass_CATX pass_CATX fail_CATX fail_CATX fail_CATX fail_CATX fail_CATX fail_CATX fail_CATX fail_CATX fail_CATX
 process tthqq125 whqq125 hqq125 zhqq125 vbfhqq125 zqq wqq qcd tqq tthqq125 whqq125 hqq125 zhqq125 vbfhqq125 zqq wqq qcd tqq
-process 1 2 3 4 5 -1 0 6 7 1 2 3 4 5 -1 0 6 7 
+process 1 2 3 4 5 0 8 6 7 1 2 3 4 5 0 8 6 7 
 rate -1 -1 -1 -1 -1 -1 -1 1.0 -1 -1 -1 -1 -1 -1 -1 -1 1.0 -1 
 ----------------------------------------------------------------------------------------------------------------------------------
 #lumi_13TeV lnN 1.026 1.026 1.026 1.026 1.026 1.026 1.026 - 1.026 1.026 1.026 1.026 1.026 1.026 1.026 1.026 - 1.026
