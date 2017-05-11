@@ -1,1 +1,1 @@
-/eos/cms/store/group/phys_exotica/dijet/dazsle/zprimebits-v12.05/Spin0_ggPhibb1j_g1_10_PseudoScalar/Output.root_job0_file0.root
+root://eoscms.cern.ch//eos/cms/store/group/phys_exotica/dijet/dazsle/zprimebits-v12.05/Spin0_ggPhibb1j_g1_10_PseudoScalar/Output.root_job0_file0.root
