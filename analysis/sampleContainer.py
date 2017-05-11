@@ -1492,7 +1492,6 @@ class sampleContainer:
         print "\n"
         
         if not self._minBranches:
-<<<<<<< HEAD
             if cut[3] > 0:
               self.h_Cuts.SetBinContent(4, float(cut[0] / cut[3] * 100.))
               self.h_Cuts.SetBinContent(5, float(cut[1] / cut[3] * 100.))
