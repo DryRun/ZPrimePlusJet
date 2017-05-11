@@ -16,11 +16,11 @@ PTCUTMUCR = 400.
 DBTAGCUT = 0.9
 T21DDTCUT = 0.55
 MUONPTCUT = 55
-METCUT = 180
+METCUT = 140
 MASS_MIN = 40
 MASS_MAX = 285
 MASS_NBINS = 35
-NJETCUT = 5
+NJETCUT = 100
 
 
 #########################################################################################################
@@ -370,9 +370,10 @@ class sampleContainer:
                 'h_pt_ak8_sub2': ["h_" + self._name + "_pt_ak8_sub2", "; AK8 3rd leading p_{T} (GeV);", 50, 300, 2100],
                 'h_pt_ak8_dbtagCut': ["h_" + self._name + "_pt_ak8_dbtagCut", "; AK8 leading p_{T} (GeV);", 45, 300,
                                       2100],
-                'h_msd_ak8': ["h_" + self._name + "_msd_ak8", "; AK8 m_{SD}^{PUPPI} (GeV);", MASS_NBINS, MASS_MIN, MASS_MAX],
-                'h_msd_ak8_raw': ["h_" + self._name + "_msd_ak8_raw", "; AK8 m_{SD}^{PUPPI} no correction (GeV);", MASS_NBINS,
+                'h_msd_ak8': ["h_" + self._name + "_msd_ak8", "; p_{T}^{(leading)} m_{SD}^{PUPPI} (GeV);", MASS_NBINS, MASS_MIN, MASS_MAX],
+                'h_msd_ak8_raw': ["h_" + self._name + "_msd_ak8_raw", "; p_{T}^{(leading)} m_{SD}^{PUPPI} no correction (GeV);", MASS_NBINS,
                                   MASS_MIN, MASS_MAX],
+                'h_rho_ak8': ["h_" + self._name + "_rho_ak8", "; p_{T}-leading  #rho=log(m_{SD}^{2}/p_{T}^{2}) ;", 50, -7, -1], 
                 'h_msd_ak8_inc': ["h_" + self._name + "_msd_ak8_inc", "; AK8 m_{SD}^{PUPPI} (GeV);", 100, 0, 500],
                 'h_msd_ak8_dbtagCut': ["h_" + self._name + "_msd_ak8_dbtagCut", "; AK8 m_{SD}^{PUPPI} (GeV);", MASS_NBINS, MASS_MIN,
                                        MASS_MAX],
@@ -392,6 +393,8 @@ class sampleContainer:
                 'h_t32_ak8_t21ddtCut': ["h_" + self._name + "_t32_ak8_t21ddtCut", "; AK8 #tau_{32};", 20, 0, 1.5],
                 'h_n2b1sd_ak8': ["h_" + self._name + "_n2b1sd_ak8", "; AK8 N_{2}^{1} (SD);", 25, -0.5, 0.5],
                 'h_n2b1sdddt_ak8': ["h_" + self._name + "_n2b1sdddt_ak8", "; AK8 N_{2}^{1,DDT} (SD);", 25, -0.5, 0.5],
+                'h_n2b1sdddt_ak8_aftercut': ["h_" + self._name + "_n2b1sdddt_ak8_aftercut", "; p_{T}-leading N_{2}^{1,DDT};", 25, -0.5, 0.5],
+                'h_dbtag_ak8_aftercut': ["h_" + self._name + "_dbtag_ak8_aftercut", "; p_{T}-leading double-b tagger;", 33, -1, 1],
                 'h_msd_ak8_raw_SR_fail': ["h_" + self._name + "_msd_ak8_raw_SR_fail",
                                           "; AK8 m_{SD}^{PUPPI} no corr (GeV);", MASS_NBINS, MASS_MIN, MASS_MAX],
                 'h_msd_ak8_raw_SR_pass': ["h_" + self._name + "_msd_ak8_raw_SR_pass",
@@ -815,9 +818,10 @@ class sampleContainer:
                 sys.stdout.write("\r[" + "=" * int(20 * i / nent) + " " + str(round(100. * i / nent, 0)) + "% done")
                 sys.stdout.flush()
 
-            # puweight = self.puWeight[0] #corrected
+            puweight = self.puWeight[0] #corrected
             nPuForWeight = min(self.npu[0], 49.5)
-            puweight = self._puw.GetBinContent(self._puw.FindBin(nPuForWeight))
+            #$print(puweight,self._puw.GetBinContent(self._puw.FindBin(nPuForWeight)))
+            #puweight = self._puw.GetBinContent(self._puw.FindBin(nPuForWeight))
             puweight_up = self._puw_up.GetBinContent(self._puw_up.FindBin(nPuForWeight))
             puweight_down = self._puw_down.GetBinContent(self._puw_down.FindBin(nPuForWeight))
             # print(self.puWeight[0],puweight,puweight_up,puweight_down)
@@ -825,13 +829,13 @@ class sampleContainer:
             # if self._name=='tqq' or 'TTbar' in self._name:
             #    fbweight = fbweight/self.topPtWeight[0] # remove top pt reweighting (assuming average weight is ~ 1)
             vjetsKF = 1.
-	    wscale=[1.0,1.0,1.0,1.20,1.25,1.25,1.0]
-	    ptscale=[0, 500, 600, 700, 800, 900, 1000,3000]
-	    ptKF=1.
+            wscale=[1.0,1.0,1.0,1.20,1.25,1.25,1.0]
+            ptscale=[0, 500, 600, 700, 800, 900, 1000,3000]
+            ptKF=1.
             if self._name == 'wqq' or self._name == 'W':
                 # print self._name
-		for i in range(0, len(ptscale)):
-			if self.genVPt[0] > ptscale[i] and self.genVPt[0]<ptscale[i+1]:  ptKF=wscale[i]
+                for i in range(0, len(ptscale)):
+                        if self.genVPt[0] > ptscale[i] and self.genVPt[0]<ptscale[i+1]:  ptKF=wscale[i]
                 vjetsKF = self.kfactor[0] * 1.35 * ptKF  # ==1 for not V+jets events
             elif self._name == 'zqq' or self._name == 'DY':
                 # print self._name
@@ -1004,8 +1008,8 @@ class sampleContainer:
                 n_MPt150dR0p8_4 = self.nAK4PuppijetsMPt150dR08_0[0]
                 n_TPt150dR0p8_4 = self.nAK4PuppijetsTPt150dR08_0[0]
 
-            met = self.puppet[0]
-            metphi = self.puppetphi[0]
+            met = self.pfmet[0]#puppet[0]
+            metphi = self.pfmetphi[0]#puppetphi[0]
             met_x = met * ROOT.TMath.Cos(metphi)
             met_y = met * ROOT.TMath.Sin(metphi)
             met_JESUp = ROOT.TMath.Sqrt(
@@ -1218,11 +1222,15 @@ class sampleContainer:
                             self.h_msd_v_pt_ak8_bbleading_topR6_fail.Fill(i[0], i[1], weight)
 
                 if jpt_8 > PTCUT and jmsd_8 > MASS_MIN:
+                        self.h_rho_ak8.Fill(rh_8, weight)
+
+                if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and rh_8<-2.1 and rh_8>-6.:
                     self.h_pt_ak8.Fill(jpt_8, weight)
                     self.h_eta_ak8.Fill(jeta_8, weight)
                     self.h_pt_ak8_sub1.Fill(jpt_8_sub1, weight)
                     self.h_pt_ak8_sub2.Fill(jpt_8_sub2, weight)
                     self.h_msd_ak8.Fill(jmsd_8, weight)
+                    self.h_rho_ak8.Fill(rh_8, weight)
                     self.h_msd_ak8_raw.Fill(jmsd_8_raw, weight)
                     self.h_dbtag_ak8.Fill(jdb_8, weight)
                     self.h_dbtag_ak8_sub1.Fill(jdb_8_sub1, weight)
@@ -1233,6 +1241,7 @@ class sampleContainer:
                     self.h_rhop_v_t21_ak8.Fill(rhP_8, jt21_8, weight)
                     self.h_n2b1sd_ak8.Fill(jtN2b1sd_8, weight)
                     self.h_n2b1sdddt_ak8.Fill(jtN2b1sdddt_8, weight)
+                
                     self.h_n_ak4.Fill(n_4, weight)
                     self.h_n_ak4_dR0p8.Fill(n_dR0p8_4, weight)
                     self.h_n_ak4fwd.Fill(n_fwd_4, weight)
@@ -1289,8 +1298,8 @@ class sampleContainer:
 
             if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and isTightVJet:
                 cut[6] = cut[6] + 1
-            if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and n_dR0p8_4 < NJETCUT and isTightVJet:
-                cut[7] = cut[7] + 1
+            #if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and n_dR0p8_4 < NJETCUT and isTightVJet:
+                #cut[7] = cut[7] + 1
             if (not self._minBranches) and jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and n_dR0p8_4 < NJETCUT and jt21P_8 < T21DDTCUT and isTightVJet:
                 if jdb_8 > DBTAGCUT:
                     # cut[9]=cut[9]+1
@@ -1313,8 +1322,13 @@ class sampleContainer:
                         self.h_msd_v_pt_ak8_topR6_fail_matched.Fill(jmsd_8, jpt_8, weight)
                     else:
                         self.h_msd_v_pt_ak8_topR6_fail_unmatched.Fill(jmsd_8, jpt_8, weight)
+            if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and n_dR0p8_4 < NJETCUT and isTightVJet and jdb_8 > DBTAGCUT and rh_8<-2.1 and rh_8>-6.:     
+                if (not self._minBranches): self.h_n2b1sdddt_ak8_aftercut.Fill(jtN2b1sdddt_8,weight)
             if jpt_8 > PTCUT and jmsd_8 > MASS_MIN and met < METCUT and n_dR0p8_4 < NJETCUT and jtN2b1sdddt_8 < 0 and isTightVJet:
                 cut[8] = cut[8] + 1
+                if  rh_8<-2.1 and rh_8>-6.:
+                    cut[7] = cut[7] + 1
+                    if (not self._minBranches): self.h_dbtag_ak8_aftercut.Fill(jdb_8,weight)
                 if jdb_8 > DBTAGCUT:
                     cut[9] = cut[9] + 1
                     self.h_msd_ak8_topR6_N2_pass.Fill(jmsd_8, weight)
@@ -1479,18 +1493,18 @@ class sampleContainer:
         
         if not self._minBranches:
             if cut[3] > 0:
-                self.h_Cuts.SetBinContent(4, float(cut[0] / cut[3] * 100.))
-                self.h_Cuts.SetBinContent(5, float(cut[1] / cut[3] * 100.))
-                # self.h_Cuts.SetBinContent(6,float(cut[2]/nent*100.))
-                self.h_Cuts.SetBinContent(1, float(cut[3] / cut[3] * 100.))
-                self.h_Cuts.SetBinContent(2, float(cut[4] / cut[3] * 100.))
-                self.h_Cuts.SetBinContent(3, float(cut[5] / cut[3] * 100.))
-                self.h_Cuts.SetBinContent(6, float(cut[6] / cut[3] * 100.))
-                self.h_Cuts.SetBinContent(7, float(cut[7] / cut[3] * 100.))
-                # self.h_Cuts.SetBinContent(9,float(cut[8]/nent*100.))
-                # self.h_Cuts.SetBinContent(10,float(cut[9]/nent*100.))
-                self.h_Cuts.SetBinContent(8, float(cut[8]) / cut[3] * 100.)
-                self.h_Cuts.SetBinContent(9, float(cut[9]) / cut[3] * 100.)
+              self.h_Cuts.SetBinContent(4, float(cut[0] / cut[3] * 100.))
+              self.h_Cuts.SetBinContent(5, float(cut[1] / cut[3] * 100.))
+              # self.h_Cuts.SetBinContent(6,float(cut[2]/nent*100.))
+              self.h_Cuts.SetBinContent(1, float(cut[3] / cut[3] * 100.))
+              self.h_Cuts.SetBinContent(2, float(cut[4] / cut[3] * 100.))
+              self.h_Cuts.SetBinContent(3, float(cut[5] / cut[3] * 100.))
+              self.h_Cuts.SetBinContent(6, float(cut[6] / cut[3] * 100.))
+    #          self.h_Cuts.SetBinContent(7, float(cut[7] / cut[3] * 100.))
+              # self.h_Cuts.SetBinContent(9,float(cut[8]/nent*100.))
+              self.h_Cuts.SetBinContent(8,float(cut[7]/ cut[3]  *100.))
+              self.h_Cuts.SetBinContent(7, float(cut[8]) / cut[3] * 100.)
+              print(cut[0] / nent * 100., cut[7], cut[8], cut[9])
             else:
                 print "WARNING : cut[3]==0 (ak8 pt cut), so skipping cutflow histogram."
             self.h_CutEvents.SetBinContent(4, cut[0])
@@ -1514,21 +1528,22 @@ class sampleContainer:
             a_Cuts.SetBinLabel(4, "lep veto")
             a_Cuts.SetBinLabel(5, "#tau veto")
             # a_Cuts.SetBinLabel(6, "#gamma veto")
-            a_Cuts.SetBinLabel(1, "500<p_{T}<550 GeV")
-            a_Cuts.SetBinLabel(2, "m_{SD}>40 GeV")
+            a_Cuts.SetBinLabel(1, "p_{T}>450 GeV")
+            a_Cuts.SetBinLabel(2, "m_{{SD}}>{} GeV".format(MASS_MIN))
             a_Cuts.SetBinLabel(3, "tight ID")
-            a_Cuts.SetBinLabel(6, "MET<180")
-            a_Cuts.SetBinLabel(7, "njet<5")
-            a_Cuts.SetBinLabel(8, "N2^{DDT}<0")
+            a_Cuts.SetBinLabel(6, "MET<" + str(METCUT))
+#            a_Cuts.SetBinLabel(7, "njet<5")
+            a_Cuts.SetBinLabel(7, "N2^{DDT}<0")
+            a_Cuts.SetBinLabel(8, "-6<#rho<-2.1")
             a_Cuts.SetBinLabel(9, "Double b-tag > " + str(DBTAGCUT))
 
             self.h_CutEvents.GetXaxis().SetBinLabel(4, "lep veto")
             self.h_CutEvents.GetXaxis().SetBinLabel(5, "#tau veto")
             # self.h_CutEvents.GetXaxis().SetBinLabel(6, "#gamma veto")
             self.h_CutEvents.GetXaxis().SetBinLabel(1, "p_{{T}}>{} GeV".format(PTCUT))
-            self.h_CutEvents.GetXaxis().SetBinLabel(2, "m_{SD}>40 GeV")
+            self.h_CutEvents.GetXaxis().SetBinLabel(2, "m_{{SD}}>{} GeV".format(MASS_MIN))
             self.h_CutEvents.GetXaxis().SetBinLabel(3, "tight ID")
-            self.h_CutEvents.GetXaxis().SetBinLabel(6, "MET<180")
+            self.h_CutEvents.GetXaxis().SetBinLabel(6, "MET<" + str(METCUT))
             self.h_CutEvents.GetXaxis().SetBinLabel(7, "njet<5")
             self.h_CutEvents.GetXaxis().SetBinLabel(8, "N2^{DDT}<0")
             self.h_CutEvents.GetXaxis().SetBinLabel(9, "Double b-tag > " + str(DBTAGCUT))
