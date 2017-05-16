@@ -17,7 +17,7 @@ r.gSystem.Load(os.getenv('CMSSW_BASE')+'/lib/'+os.getenv('SCRAM_ARCH')+'/libHigg
 
 # including other directories
 import tools as tools
-from RootIterator import RootIterator
+from DAZSLE.ZPrimePlusJet.RootIterator import RootIterator
 from hist import *
 
 BB_SF = 0.91
