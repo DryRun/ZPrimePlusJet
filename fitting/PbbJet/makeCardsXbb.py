@@ -60,7 +60,7 @@ def main(options,args):
 		linel = [];
 		for line in dctpl: 
 			print line.strip().split()
-			line = line.replace("SIGNALNAME", signal_name).replace("SIGNALMASS", str(config.signal_masses[signal_name]))
+			line = line.replace("SIGNALNAME", signal_name).replace("SIGNALMASS", "")
 			linel.append(line.strip())
 
 		for i in range(1,numberOfPtBins+1):
@@ -72,7 +72,7 @@ def main(options,args):
 			mcstatErrs = {}
 			for box in boxes:
 				for proc in (sigs+bkgs):
-					print "Taking integral of {}".format('%s_%s'%(proc,box))
+					#print "Taking integral of {}".format('%s_%s'%(proc,box))
 					rate = histoDict['%s_%s'%(proc,box)].Integral(1, numberOfMassBins, i, i)
 					if rate>0 and len(systs) > 0:
 						rateJESUp = histoDict['%s_%s_JESUp'%(proc,box)].Integral(1, numberOfMassBins, i, i)
@@ -138,8 +138,8 @@ def main(options,args):
 									mcStatStrings['%s_%s'%(proc1,box1),i,j] += '\t-'
 
 			tag = "cat"+str(i)
-			os.system("mkdir -pv " + options.odir + "/{}{}".format(model, mass))
-			dctmp = open(options.odir+"/{}{}/card_rhalphabet_{}.txt".format(model, mass, tag), 'w')
+			os.system("mkdir -pv " + options.odir + "/{}".format(signal_name))
+			dctmp = open(options.odir+"{}/card_rhalphabet_{}.txt".format(signal_name, tag), 'w')
 			for l in linel:
 				if 'JES' in l:
 					if not "JES" in systs:
@@ -154,8 +154,11 @@ def main(options,args):
 				elif 'veff' in l:
 					newline = vString
 				elif 'TQQEFF' in l:
-					tqqeff = histoDict['tqq_pass'].Integral() / (
-					histoDict['tqq_pass'].Integral() + histoDict['tqq_fail'].Integral())
+					if (histoDict['tqq_pass'].Integral() + histoDict['tqq_fail'].Integral()) > 0:
+						tqqeff = histoDict['tqq_pass'].Integral() / (histoDict['tqq_pass'].Integral() + histoDict['tqq_fail'].Integral())
+					else:
+						print "[makeCardsXbb] WARNING : tqq histograms have zero integral! Is this right?"
+						tqqeff = 0.
 					newline = l.replace('TQQEFF','%.4f'%tqqeff)
 				else:
 					newline = l
@@ -177,9 +180,11 @@ def main(options,args):
 								#print 'include %s%scat%imcstat%i'%(proc,box,i,j)
 								mcStatGroupString += ' %s%scat%imcstat%i'%(proc,box,i,j)
 							else:
-								print 'do not include %s%scat%imcstat%i'%(proc,box,i,j)
+								#print 'do not include %s%scat%imcstat%i'%(proc,box,i,j)
+								pass
 						else:
-							print 'do not include %s%scat%imcstat%i'%(proc,box,i,j)
+							#print 'do not include %s%scat%imcstat%i'%(proc,box,i,j)
+							pass
 							
 			for im in range(numberOfMassBins):
 				dctmp.write("qcd_fail_%s_Bin%i flatParam \n" % (tag,im+1))

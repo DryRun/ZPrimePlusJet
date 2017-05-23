@@ -8,6 +8,7 @@ import sys
 import time
 import array
 import re
+import DAZSLE.PhiBBPlusJet.analysis_configuration as config
 
 #r.gSystem.Load("~/Dropbox/RazorAnalyzer/python/lib/libRazorRun2.so")
 r.gSystem.Load(os.getenv('CMSSW_BASE')+'/lib/'+os.getenv('SCRAM_ARCH')+'/libHiggsAnalysisCombinedLimit.so')
@@ -36,7 +37,8 @@ re_sbb = re.compile("Sbb(?P<mass>\d+)")
 class RhalphabetBuilder():
     def __init__(self, pass_hists, fail_hists, input_file, out_dir, nr=2, np=1, mass_nbins=23, mass_lo=40, mass_hi=201,
                  blind_lo=110, blind_hi=131, rho_lo=-6, rho_hi=-2.1, blind=False, mass_fit=False, freeze_poly=False,
-                 remove_unmatched=False, input_file_loose=None):
+                 remove_unmatched=False, input_file_loose=None, quiet=False):
+        self._quiet = quiet
         self._pass_hists = pass_hists
         self._fail_hists = fail_hists
         self._mass_fit = mass_fit
@@ -109,10 +111,10 @@ class RhalphabetBuilder():
         self._all_pars = []
 
         self._background_names = ["wqq", "zqq", "qcd", "tqq"]
-        self._signal_names = []
+        self._signal_names = config.signal_names
         # for Pbb
-        for mass in [50,75,125,100,150,200,250,300]:
-            self._signal_names.append("DMSbb" + str(mass))
+        #for mass in [50,75,125,100,150,200,250,300]:
+        #    self._signal_names.append("DMSbb" + str(mass))
         # for mass in [50,75,125,100,150,250,300]:
         #    self._signal_names.append("Pbb_" + str(mass))
         # for Hbb
@@ -472,8 +474,9 @@ class RhalphabetBuilder():
 
         polynomial_variables = []
         self.buildPolynomialArray(polynomial_variables, self._poly_degree_pt, self._poly_degree_rho, "p", "r", -30, 30)
-        print "polynomial_variables=",
-        print polynomial_variables
+        if not self._quiet:
+            print "polynomial_variables=",
+            print polynomial_variables
 
         # Now build the function
         pass_bins = r.RooArgList()
@@ -503,7 +506,8 @@ class RhalphabetBuilder():
                     fail_bin_content -= fail_histograms[sample].GetBinContent(mass_bin)  # subtract W/Z/ttbar from data
             if fail_bin_content < 0: fail_bin_content = 0.
 
-            print rhalph_bkgd_name + "_fail_" + category + "_Bin" + str(mass_bin), fail_bin_content
+            if not self._quiet:
+                print rhalph_bkgd_name + "_fail_" + category + "_Bin" + str(mass_bin), fail_bin_content
 
             # 50 sigma range + 10 events
             fail_bin_unc = math.sqrt(fail_bin_content) * 50. + 10.
@@ -512,18 +516,19 @@ class RhalphabetBuilder():
                                         rhalph_bkgd_name + "_fail_" + category + "_Bin" + str(mass_bin),
                                         fail_bin_content, 0., max(fail_bin_content + fail_bin_unc, 0.))
 
-            print "[david debug] fail_bin_var:"
-            fail_bin_var.Print()
+            if not self._quiet:
+                print "[david debug] fail_bin_var:"
+                fail_bin_var.Print()
 
             # Now define the passing cateogry based on the failing (make sure it can't go negative)
             lArg = r.RooArgList(fail_bin_var, roopolyarray, self._lEffQCD)
             pass_bin_var = r.RooFormulaVar(rhalph_bkgd_name + "_pass_" + category + "_Bin" + str(mass_bin),
                                            rhalph_bkgd_name + "_pass_" + category + "_Bin" + str(mass_bin),
                                            "@0*max(@1,0)*@2", lArg)
-            print "Pass=fail*poly*eff RooFormulaVar:"
-            print pass_bin_var.Print()
-
-            # print pass_bin_var.GetName()
+            if not self._quiet:
+                print "Pass=fail*poly*eff RooFormulaVar:"
+                print pass_bin_var.Print()
+                print pass_bin_var.GetName()
 
             # If the number of events in the failing is small remove the bin from being free in the fit
             if fail_bin_content < 4:
@@ -617,13 +622,13 @@ class RhalphabetBuilder():
                 if lNCount == 0:
                     lTmpArray.add(iQCD);  # for the very first constant (e.g. p0r0), just set that to 1
                 else:
-                    print "lNCount = " + str(lNCount)
+                    #print "lNCount = " + str(lNCount)
                     lTmpArray.add(iVars[lNCount])
                 lNCount = lNCount + 1
             pLabel = "Var_Pol_Bin_" + str(round(iPt, 2)) + "_" + str(round(iRho, 3)) + "_" + str(pRVar)
             pPol = r.RooPolyVar(pLabel, pLabel, lPt, lTmpArray)
-            print "pPol:"
-            print pPol.Print()
+            #print "pPol:"
+            #print pPol.Print()
             lRhoArray.add(pPol);
             self._all_vars.append(pPol)
 
@@ -685,7 +690,8 @@ class RhalphabetBuilder():
 
                 pRooVar = r.RooRealVar(pVar, pVar, 0.0, pXMin, pXMax)
                 # print("========  here i0 %s i1 %s"%(i0,i1))
-                print pVar
+                if not self._quiet:
+                    print pVar
                 # print(" is : %s  +/- %s"%(value[i0*3+i1],error[i0*3+i1]))
                 iVars.append(pRooVar)
                 self._all_vars.append(pRooVar)
@@ -807,7 +813,7 @@ class RhalphabetBuilder():
             cat = import_object.GetName().split('_')[1]
             print "[debug] process = {} / cat = {}".format(process, cat)
             mass = 0
-            systematics = ['JES', 'JER', 'trigger', 'mcstat', 'Pu']
+            systematics = ['JES', 'JER', 'Trigger', 'mcstat'] # Pu
             if do_syst and ('tqq' in process or 'wqq' in process or 'zqq' in process or 'hqq' in process or "Sbb" in process):
                 # get systematic histograms
                 hout = []
@@ -887,7 +893,8 @@ class RhalphabetBuilder():
                 uncorrelate(histDict, 'mcstat')
                 for key, myhist in histDict.iteritems():
                     if 'mcstat' in key:
-                        print key
+                        if not self._quiet:
+                            print key
                         hout.append(myhist)
                 # blind if necessary and output to workspace
                 for h in hout:
@@ -900,9 +907,9 @@ class RhalphabetBuilder():
                             h.SetBinContent(i, 0.)
                             h.SetBinError(i, 0.)
                         if rhoVal < self._rho_lo or rhoVal > self._rho_hi:
-                            print "removing rho = %.2f for %s, pt_val = %.2f, mass bin [%i,%i]" % (
-                                rhoVal, h.GetName(), pt_val, h.GetXaxis().GetBinLowEdge(i),
-                                h.GetXaxis().GetBinUpEdge(i))
+                            #print "removing rho = %.2f for %s, pt_val = %.2f, mass bin [%i,%i]" % (
+                            #    rhoVal, h.GetName(), pt_val, h.GetXaxis().GetBinLowEdge(i),
+                            #    h.GetXaxis().GetBinUpEdge(i))
                             h.SetBinContent(i, 0.)
                             h.SetBinError(i, 0.)
                     tmprdh = r.RooDataHist(h.GetName(), h.GetName(), r.RooArgList(self._lMSD), h)
@@ -1055,7 +1062,7 @@ class RhalphabetBuilder():
 def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_range, rho_range, fLoose=None):
     pass_hists = {}
     fail_hists = {}
-    f.ls()
+    #f.ls()
 
     # backgrounds
     pass_hists_bkg = {}
@@ -1085,7 +1092,12 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
                                 i) < mass_range[1]:
                             qcd_pass_real_integral += qcd_pass_real.GetBinContent(i, j)
                             qcd_fail_integral += qcd_fail.GetBinContent(i, j)
-                qcd_pass.Scale(qcd_pass_real_integral / qcd_fail_integral)  # qcd_pass = qcd_fail * eff(pass)/eff(fail)
+                if qcd_fail_integral > 0:
+                    qcd_pass.Scale(qcd_pass_real_integral / qcd_fail_integral)  # qcd_pass = qcd_fail * eff(pass)/eff(fail)
+                else:
+                    print "[LoadHistograms] ERROR : qcd_fail_integral = 0" 
+                    print "[LoadHistograms] ERROR : f = " + f.GetPath()
+                    sys.exit(1)
             pass_hists_bkg["qcd"] = qcd_pass
             fail_hists_bkg["qcd"] = qcd_fail
             print 'qcd pass integral', qcd_pass.Integral()
@@ -1118,27 +1130,26 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
     # sigs = ['Pbb_']
     # signal_names = []
     # for Hbb
-    masses = [50,75,125,100,150,200,250,300,400]
-    sigs = ["DMSbb"]
-    signal_names = []
 
-    for mass in masses:
-        for sig in sigs:
-            print "[debug] Getting " + sig + str(mass) + "_pass"
-            passhist = f.Get(sig + str(mass) + "_pass").Clone()
-            failhist = f.Get(sig + str(mass) + "_fail").Clone()
-            for hist in [passhist, failhist]:
-                for i in range(0, hist.GetNbinsX() + 2):
-                    for j in range(0, hist.GetNbinsY() + 2):
-                        if hist.GetBinContent(i, j) <= 0:
-                            hist.SetBinContent(i, j, 0)
-            failhist.Scale(1. / scale)
-            passhist.Scale(1. / scale)
-            failhist.Scale(GetSF(sig + str(mass), 'fail', f))
-            passhist.Scale(GetSF(sig + str(mass), 'pass', f))
-            pass_hists_sig[sig + str(mass)] = passhist
-            fail_hists_sig[sig + str(mass)] = failhist
-            signal_names.append(sig + str(mass))
+    for signal_name in config.signal_names:
+        print "[debug] Getting " + signal_name + "_pass"
+        if not f.Get(signal_name + "_pass"):
+            print "[LoadHistograms] ERROR : Couldn't load histogram " + signal_name + "_pass" + " from file " + f.GetPath()
+            sys.exit(1)
+        passhist = f.Get(signal_name + "_pass").Clone()
+        failhist = f.Get(signal_name + "_fail").Clone()
+        for hist in [passhist, failhist]:
+            for i in range(0, hist.GetNbinsX() + 2):
+                for j in range(0, hist.GetNbinsY() + 2):
+                    if hist.GetBinContent(i, j) <= 0:
+                        hist.SetBinContent(i, j, 0)
+        failhist.Scale(1. / scale)
+        passhist.Scale(1. / scale)
+        failhist.Scale(GetSF(signal_name, 'fail', f))
+        passhist.Scale(GetSF(signal_name, 'pass', f))
+        pass_hists_sig[signal_name] = passhist
+        fail_hists_sig[signal_name] = failhist
+        #signal_names.append(signal_name)
 
     if pseudo:
         for i, bkg in enumerate(background_names):
@@ -1152,9 +1163,9 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
                 pass_hists["data_obs"].Add(pass_hists_bkg[bkg])
                 fail_hists["data_obs"].Add(fail_hists_bkg[bkg])
 
-        for i, signal in enumerate(signal_names):
-            pass_hists["data_obs"].Add(pass_hists_sig[signal], r_signal)
-            fail_hists["data_obs"].Add(fail_hists_sig[signal], r_signal)
+        for i, signal_name in enumerate(config.signal_names):
+            pass_hists["data_obs"].Add(pass_hists_sig[signal_name], r_signal)
+            fail_hists["data_obs"].Add(fail_hists_sig[signal_name], r_signal)
     else:
         pass_hists["data_obs"] = f.Get('data_obs_pass')
         fail_hists["data_obs"] = f.Get('data_obs_fail')

@@ -48,7 +48,7 @@ def main(options, args):
     # Build the workspacees
     #dazsleRhalphabetBuilder(hpass, hfail, f, odir, options.NR, options.NP)
 
-    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, f, options.odir, nr=options.NR, np=options.NP, mass_nbins=MASS_BINS, mass_lo=MASS_LO, mass_hi=MASS_HI, blind_lo=BLIND_LO, blind_hi=BLIND_HI, rho_lo=RHO_LO, rho_hi=RHO_HI, blind=options.blind, mass_fit=options.massfit, freeze_poly=options.freeze)
+    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, f, options.odir, nr=options.NR, np=options.NP, mass_nbins=MASS_BINS, mass_lo=MASS_LO, mass_hi=MASS_HI, blind_lo=BLIND_LO, blind_hi=BLIND_HI, rho_lo=RHO_LO, rho_hi=RHO_HI, blind=options.blind, mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True)
     rhalphabuilder.run()
 
 ##-------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_option('--pseudo', action='store_true', dest='pseudo', default=False, help='use MC', metavar='pseudo')
     parser.add_option('--blind', action='store_true', dest='blind', default=False, help='blind signal region',
                       metavar='blind')
-    parser.add_option('--use-qcd', action='store_true', dest='useQCD', default=False, help='use real QCD MC',
+    parser.add_option('--useQCD', action='store_true', dest='useQCD', default=False, help='use real QCD MC',
                       metavar='useQCD')
     parser.add_option('--massfit', action='store_true', dest='massfit', default=False, help='mass fit or rho',
                       metavar='massfit')

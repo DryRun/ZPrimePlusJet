@@ -197,13 +197,13 @@ def main(options, args):
     #sigs = ['zqq','wqq']
     #bkgs = ['tthqq125','whqq125','hqq125','zhqq125','vbfhqq125','qcd','tqq','vvqq','stqq','wlnu','zll']
     if do_jesjer:
-        systs = ['JER','JES','mutrigger','muid','muiso']
+        systs = ['JER','JES','MuTrigger','MuID','MuIso']
     else:
-        systs = ['mutrigger','muid','muiso']
+        systs = ['MuTrigger','MuID','MuIso']
     
-    tfile = rt.TFile.Open(options.idir+'/hist_1DZbb_muonCR_fixed.root','read')
+    tfile = rt.TFile.Open(options.idir+'/histograms_muCR_{}.root'.format(options.jet_type),'read')
     if not tfile.IsOpen():
-        print "ERROR : Couldn't open file at " + options.idir+'/hist_1DZbb_muonCR_fixed.root'
+        print "ERROR : Couldn't open file at " + options.idir+'/histograms_muCR_{}.root'.format(options.jet_type)
         sys.exit(1)
     tfile.ls()
     histoDict = {}
@@ -212,11 +212,17 @@ def main(options, args):
     for proc in (bkgs+sigs+['data_obs']):
         for box in boxes:
             print 'getting histogram for process: %s_%s'%(proc,box)
+            if not tfile.Get('%s_%s'%(proc,box)):
+                print "ERROR: Can't load histogram {} from file {}".format('%s_%s'%(proc,box), tfile.GetPath())
+                sys.exit(1)
             histoDict['%s_%s'%(proc,box)] = tfile.Get('%s_%s'%(proc,box)).Clone()
             histoDict['%s_%s'%(proc,box)].Scale(GetSF(proc,box,tfile))
             for syst in systs:
                 if proc!='data_obs':
                     print 'getting histogram for process: %s_%s_%sUp'%(proc,box,syst)
+                    if not tfile.Get('%s_%s_%sUp'%(proc,box,syst)):
+                        print "ERROR : Can't load histogram {} from file {}".format('%s_%s_%sUp'%(proc,box,syst), tfile.GetPath())
+                        sys.exit(1)
                     histoDict['%s_%s_%sUp'%(proc,box,syst)] = tfile.Get('%s_%s_%sUp'%(proc,box,syst)).Clone()
                     histoDict['%s_%s_%sUp'%(proc,box,syst)].Scale(GetSF(proc,box,tfile))
                     print 'getting histogram for process: %s_%s_%sDown'%(proc,box,syst)
@@ -256,7 +262,7 @@ if __name__ == '__main__':
     parser.add_option('--lumi', dest='lumi', type=float, default = 20,help='lumi in 1/fb ', metavar='lumi')
     parser.add_option('-i','--idir', dest='idir', default = './',help='directory with data', metavar='idir')
     parser.add_option('-o','--odir', dest='odir', default = './',help='directory to write cards', metavar='odir')
-    
+    parser.add_option('-j', '--jet_type', dest='jet_type', default="AK8", help="AK8 or CA15")
     (options, args) = parser.parse_args()
 
     main(options, args)
