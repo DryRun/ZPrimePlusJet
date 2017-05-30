@@ -59,7 +59,7 @@ def main(options,args):
 
 		linel = [];
 		for line in dctpl: 
-			print line.strip().split()
+			#print line.strip().split()
 			line = line.replace("SIGNALNAME", signal_name).replace("SIGNALMASS", "")
 			linel.append(line.strip())
 

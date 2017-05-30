@@ -2,10 +2,10 @@ import os
 import sys
 from glob import glob
 
-step1 = True
+step1 = False
 step2 = True
 
-tau21_values = [0.4, 0.45, 0.5, 0.525, 0.55, 0.575, 0.6, 0.65, 0.7]
+tau21_values = [0.6, 0.65, 0.7] # 0.4, 0.45, 0.5, 0.525, 0.55, 0.575, 
 dcsv_values = [0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925, 0.95, 0.975]
 #tau21_values = [0.55]
 #dcsv_values = [0.9]
@@ -13,6 +13,7 @@ jet_types = ["AK8", "CA15"]
 for tau_21 in tau21_values:
 	for dcsv in dcsv_values:
 		for jet_type in jet_types:
+			print "On {}/{}/{}".format(tau_21, dcsv, jet_type)
 			wp_string = "tau21ddt{}_dcsv{}_{}".format(tau_21, dcsv, jet_type)
 			print wp_string
 			directory = "/uscms_data/d3/dryu/DAZSLE/data/LimitSetting/Xbb_inputs/{}".format(wp_string)
@@ -22,10 +23,25 @@ for tau_21 in tau21_values:
 				print "[makeCardsXbb]"
 				os.system("python makeCardsXbb.py -o {}/cards_mcstat/ -i {}/histograms_SR_{}.root".format(directory, directory, wp_string))
 				print "[buildRhalphabetXbb]"
-				os.system("python buildRhalphabetXbb.py -i {}/histograms_SR_{}.root -o {}/cards_mcstat/ --pseudo --useQCD".format(directory, wp_string, directory))
+				previous_directory = os.getcwd()
+				working_directory = directory + "/cards_mcstat/"
+				os.chdir(working_directory)
+				run_script_path = working_directory + "/run_rhalphabet.sh"
+				run_script = open(run_script_path, "w")
+				run_script.write("#!/bin/bash\n")
+				run_script.write("python $CMSSW_BASE/src/DAZSLE/ZPrimePlusJet/fitting/PbbJet/buildRhalphabetXbb.py -i histograms_SR_{}.root -o . --pseudo --useQCD\n".format(wp_string))
+				run_script.close()
+				csub_script = open(working_directory + "/csub.sh", "w")
+				csub_script.write("#!/bin/bash\n")
+				files_to_transfer = ["{}/histograms_SR_{}.root".format(directory, wp_string)]
+				csub_script.write("csub {} --cmssw --no_retar -F {}\n".format(run_script_path, ",".join(files_to_transfer)))
+				csub_script.close()
+				os.system("source {}/csub.sh".format(working_directory))
+				os.chdir(previous_directory)
+				#os.system("python buildRhalphabetXbb.py -i {}/histograms_SR_{}.root -o {}/cards_mcstat/ --pseudo --useQCD".format(directory, wp_string, directory))
 				#print "[writeMuonCRDatacardXbb]"
 				#os.system("python writeMuonCRDatacardXbb.py -i {} -o {}/cards_mcstat/".format(directory, directory))
-			if step2:
+			elif step2:
 				cwd = os.getcwd()
 				print "[debug] Glob pattern = " + directory + "/cards_mcstat/*Sbb*"
 				signal_dirs = glob(directory + "/cards_mcstat/*Sbb*")
@@ -49,3 +65,4 @@ for tau_21 in tau21_values:
 					os.chdir(cwd)
 
 
+print "Done."

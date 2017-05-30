@@ -17,9 +17,8 @@ gSystem.Load(os.getenv('CMSSW_BASE') + '/lib/' + os.getenv('SCRAM_ARCH') + '/lib
 
 # including other directories
 # sys.path.insert(0, '../.')
-sys.path.insert(0, '../.')
+sys.path.insert(0, os.path.expandvars("$CMSSW_BASE/src/DAZSLE/ZPrimePlusJet/fitting/"))
 sys.path.insert(0, '.')
-from tools import *
 from tools import *
 from hist import *
 from rhalphabet_builder import RhalphabetBuilder, LoadHistograms, GetSF
