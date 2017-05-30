@@ -1,0 +1,11 @@
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_0.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_1.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_2.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_3.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_4.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_5.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_6.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_7.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_8.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_9.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016F_03Feb2017_v1_v3_10.root

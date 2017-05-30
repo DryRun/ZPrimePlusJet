@@ -1,0 +1,2 @@
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016B_03Feb2017_ver2_v2_v3.root
+root://cmseos.fnal.gov//eos/uscms/store/user/lpchbb/zprimebits-v12.05/JetHTRun2016B_03Feb2017_ver1_v1_v3.root
