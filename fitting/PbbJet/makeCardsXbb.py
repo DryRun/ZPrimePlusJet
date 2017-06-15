@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import ROOT as r,sys,math,array,os
-from ROOT import TFile, TTree, TChain, gPad, gDirectory
+from ROOT import TFile, TTree, TChain, gPad, gDirectory, gSystem
 from multiprocessing import Process
 from optparse import OptionParser
 from operator import add
@@ -14,9 +14,14 @@ import array
 sys.path.insert(0, '../.')
 from tools import *
 
-from buildRhalphabetXbb import MASS_BINS,MASS_LO,MASS_HI,BLIND_LO,BLIND_HI,RHO_LO,RHO_HI
-from rhalphabet_builder import BB_SF,BB_SF_ERR,V_SF,V_SF_ERR,GetSF
+#from buildRhalphabetXbb import cuts[options.jet_type]["MASS_BINS"],cuts[options.jet_type]["MSD"][0],cuts[options.jet_type]["MSD"][1],cuts[options.jet_type]["RHO"][0],cuts[options.jet_type]["RHO"][1]
+#from rhalphabet_builder import sfs[options.jet_type]["BB"],sfs[options.jet_type]["BB_ERR"],sfs[options.jet_type]["V"],sfs[options.jet_type]["V_ERR"],GetSF
+gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJet.so"))
+from DAZSLE.PhiBBPlusJet.cuts import cuts
+from DAZSLE.PhiBBPlusJet.sfs import sfs
+
 import DAZSLE.PhiBBPlusJet.analysis_configuration as config
+from DAZSLE.PhiBBPlusJet.cuts import *
 
 do_syst_mcstat=False
 ##-------------------------------------------------------------------------------------
@@ -30,8 +35,8 @@ def main(options,args):
 
 		nBkgd = len(bkgs)
 		nSig = len(sigs)
-		numberOfMassBins = 70    
-		numberOfPtBins = 6
+		numberOfMassBins = cuts[options.jet_type]["MASS_BINS"]   
+		numberOfPtBins = len(cuts[options.jet_type]["PT_BINS"])-1
 
 		histoDict = {}
 
@@ -85,14 +90,14 @@ def main(options,args):
 						jesErrs['%s_%s'%(proc,box)] =  1.0
 						jerErrs['%s_%s'%(proc,box)] =  1.0
 						
-					vErrs['%s_%s'%(proc,box)] = 1.0+V_SF_ERR/V_SF
+					vErrs['%s_%s'%(proc,box)] = 1.0+sfs[options.jet_type]["V_ERR"]/sfs[options.jet_type]["V"]
 					if box=='pass':
-						bbErrs['%s_%s'%(proc,box)] = 1.0+BB_SF_ERR/BB_SF
+						bbErrs['%s_%s'%(proc,box)] = 1.0+sfs[options.jet_type]["BB_ERR"]/sfs[options.jet_type]["BB"]
 					else:
 						ratePass = histoDict['%s_%s'%(proc,'pass')].Integral()
 						rateFail = histoDict['%s_%s'%(proc,'fail')].Integral()
 						if rateFail>0:
-							bbErrs['%s_%s'%(proc,box)] = 1.0-BB_SF_ERR*(ratePass/rateFail)
+							bbErrs['%s_%s'%(proc,box)] = 1.0-sfs[options.jet_type]["BB_ERR"]*(ratePass/rateFail)
 						else:
 							bbErrs['%s_%s'%(proc,box)] = 1.0
 							
@@ -174,7 +179,7 @@ def main(options,args):
 							massVal = histoDict['%s_%s'%(proc,box)].GetXaxis().GetBinCenter(j)
 							ptVal = histoDict['%s_%s'%(proc,box)].GetYaxis().GetBinLowEdge(i) + 0.3*(histoDict['%s_%s'%(proc,box)].GetYaxis().GetBinWidth(i))
 							rhoVal = r.TMath.Log(massVal*massVal/ptVal/ptVal)
-							if not( options.blind and massVal > BLIND_LO and massVal < BLIND_HI) and not (rhoVal < RHO_LO or rhoVal > RHO_HI):
+							if not( options.blind and massVal > BLIND_LO and massVal < BLIND_HI) and not (rhoVal < cuts[options.jet_type]["RHO"][0] or rhoVal > cuts[options.jet_type]["RHO"][1]):
 								if do_syst_mcstat:
 									dctmp.write(mcStatStrings['%s_%s'%(proc,box),i,j] + "\n")
 								#print 'include %s%scat%imcstat%i'%(proc,box,i,j)
@@ -207,6 +212,7 @@ if __name__ == '__main__':
 	parser.add_option('-o','--odir', dest='odir', default = 'cards/',help='directory to write cards', metavar='odir')
 	parser.add_option('--pseudo', action='store_true', dest='pseudo', default =False,help='signal comparison', metavar='isData')
 	parser.add_option('--blind', action='store_true', dest='blind', default =False,help='blind signal region', metavar='blind')
+	parser.add_option('--jet_type', type=str, help='AK8 or CA15')
 
 	(options, args) = parser.parse_args()
 

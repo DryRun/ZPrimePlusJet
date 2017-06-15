@@ -132,7 +132,6 @@ class RhalphabetBuilder():
         categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
                       'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
 
-        sigs = self._signal_names
         wbase = {}
         for cat in categories:
             wbase[cat] = fbase.Get('w_%s' % cat)
@@ -229,8 +228,6 @@ class RhalphabetBuilder():
         categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
                       'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
 
-        bkgs = self._background_names
-        sigs = self._signal_names
 
         wbase = {}
         wralphabase = {}
@@ -265,7 +262,7 @@ class RhalphabetBuilder():
             pdfs_s.add(wralphabase[cat].pdf('qcd_%s' % cat))
 
             data[cat] = wbase[cat].data('data_obs_%s' % cat)
-            for proc in (bkgs + sigs):
+            for proc in (self._background_names + self._signal_names):
                 if proc == 'qcd': continue
 
                 datahist['%s_%s' % (proc, cat)] = wbase[cat].data('%s_%s' % (proc, cat))
@@ -275,7 +272,7 @@ class RhalphabetBuilder():
                                                               datahist['%s_%s' % (proc, cat)])
                 getattr(w, 'import')(datahist['%s_%s' % (proc, cat)], r.RooFit.RecycleConflictNodes())
                 getattr(w, 'import')(histpdf['%s_%s' % (proc, cat)], r.RooFit.RecycleConflictNodes())
-                if 'hqq125' in proc:
+                if proc in self._signal_names:
                     # signal
                     signorm['%s_%s' % (proc, cat)] = r.RooRealVar('signorm_%s_%s' % (proc, cat),
                                                                   'signorm_%s_%s' % (proc, cat),
@@ -396,9 +393,6 @@ class RhalphabetBuilder():
 
         categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
                       'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
-
-        bkgs = self._background_names
-        sigs = self._signal_names
 
         wbase = {}
         wralphabase = {}
@@ -1219,7 +1213,7 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
 
 
 def GetSF(process, cat, f, fLoose=None, removeUnmatched=False, iPt=-1):
-    SF = 1
+    SF = 1.
     print process, cat
     if 'hqq' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
         if 'pass' in cat:
