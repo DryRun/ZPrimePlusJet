@@ -111,7 +111,7 @@ class RhalphabetBuilder():
         self._all_data = []
         self._all_pars = []
 
-        self._background_names = ["wqq", "zqq", "qcd", "tqq"]
+        self._background_names = ["wqq", "zqq", "qcd", "tqq", "hbb"]
         self._signal_names = config.signal_names
         # for Pbb
         #for mass in [50,75,125,100,150,200,250,300]:
@@ -353,7 +353,7 @@ class RhalphabetBuilder():
         r.RooStats.RemoveConstantParameters(allParams)
         opt.Add(r.RooFit.Constrain(allParams))
 
-        mu.setVal(1)
+        mu.setVal(0.)
         mu.setConstant(True)
 
         nll = simPdf_s.createNLL(combData)
@@ -438,7 +438,7 @@ class RhalphabetBuilder():
             print "------- this bin pT value ", this_pt
 
             # Make the rhalphabet fit for this pt bin
-            (rhalphabet_hist_pass, rhalphabet_hist_fail) = self.MakeRhalphabet(["data_obs", "wqq", "zqq", "tqq"],
+            (rhalphabet_hist_pass, rhalphabet_hist_fail) = self.MakeRhalphabet(["data_obs", "wqq", "zqq", "tqq", "hbb"],
                                                                                fail_hists_ptbin, this_pt,
                                                                                "cat" + str(pt_bin))
 
@@ -708,7 +708,7 @@ class RhalphabetBuilder():
 
     def GetWorkspaceInputs(self, pass_histograms, fail_histograms,iBin):
         # Protect against zero norm?
-        for background in ["wqq", "zqq", "tqq"]:
+        for background in ["wqq", "zqq", "tqq", "hbb"]:
             if pass_histograms[background].Integral() == 0:
                 print "[GetWorkspaceInputs] WARNING : Zero norm for histogram {}. Filling with (500, 1.e-10).".format(pass_histograms[background].GetName())
                 pass_histograms[background].Fill(500., 1.e-10)
@@ -724,7 +724,7 @@ class RhalphabetBuilder():
         data_rdh_comb  = r.RooDataHist("comb_data_obs","comb_data_obs",r.RooArgList(self._lMSD),r.RooFit.Index(roocategories),r.RooFit.Import("pass",data_rdh_pass),r.RooFit.Import("fail",data_rdh_fail)) 
 
         roofit_shapes = {}
-        for sample in ["wqq", "zqq", "qcd", "tqq"]:
+        for sample in ["wqq", "zqq", "qcd", "tqq", "hbb"]:
             roofit_shapes[sample] = self.GetRoofitHistObjects(pass_histograms[sample], fail_histograms[sample], sample,
                                                               iBin)
 
@@ -734,10 +734,10 @@ class RhalphabetBuilder():
                                      r.RooArgList(roofit_shapes["qcd"]["fail_epdf"]))
         ewk_pdf_pass = r.RooAddPdf("ewk_pass" + iBin, "ewk_pass" + iBin,
                                    r.RooArgList(roofit_shapes["wqq"]["pass_epdf"], roofit_shapes["zqq"]["pass_epdf"],
-                                                roofit_shapes["tqq"]["pass_epdf"]))
+                                                roofit_shapes["tqq"]["pass_epdf"], roofit_shapes["hbb"]["pass_epdf"]))
         ewk_pdf_fail = r.RooAddPdf("ewk_fail" + iBin, "ewk_fail" + iBin,
                                    r.RooArgList(roofit_shapes["wqq"]["fail_epdf"], roofit_shapes["zqq"]["fail_epdf"],
-                                                roofit_shapes["tqq"]["fail_epdf"]))
+                                                roofit_shapes["tqq"]["fail_epdf"], roofit_shapes["hbb"]["fail_epdf"]))
 
         total_simulpdf = r.RooSimultaneous("tot", "tot", roocategories)
         total_simulpdf.addPdf(total_pdf_pass, "pass")
@@ -754,9 +754,9 @@ class RhalphabetBuilder():
             # {"qcd":total_pdf_pass, "ewk":ewk_pdf_pass},
             # {"qcd":total_pdf_fail, "ewk":ewk_pdf_fail},
             {"wqq": roofit_shapes["wqq"]["pass_rdh"], "zqq": roofit_shapes["zqq"]["pass_rdh"],
-             "tqq": roofit_shapes["tqq"]["pass_rdh"]},
+             "tqq": roofit_shapes["tqq"]["pass_rdh"], "hbb":roofit_shapes["hbb"]["pass_rdh"]},
             {"wqq": roofit_shapes["wqq"]["fail_rdh"], "zqq": roofit_shapes["zqq"]["fail_rdh"],
-             "tqq": roofit_shapes["tqq"]["fail_rdh"]},
+             "tqq": roofit_shapes["tqq"]["fail_rdh"], "hbb":roofit_shapes["hbb"]["fail_rdh"]},
         ]
 
     # Get (RooHistPdf, RooExtendPdf, RooDataHist) for a pair of pass/fail histograms
@@ -822,7 +822,7 @@ class RhalphabetBuilder():
             cat = import_object.GetName().split('_')[1]
             mass = 0
             systematics = ['JES', 'JER', 'Trigger', 'mcstat'] # Pu
-            if do_syst and ('tqq' in process or 'wqq' in process or 'zqq' in process or 'hqq' in process or "Sbb" in process):
+            if do_syst and ('tqq' in process or 'wqq' in process or 'zqq' in process or 'hbb' in process or "Sbb" in process):
                 # get systematic histograms
                 hout = []
                 histDict = {}
@@ -1077,7 +1077,7 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
     # backgrounds
     pass_hists_bkg = {}
     fail_hists_bkg = {}
-    background_names = ["wqq", "zqq", "qcd", "tqq"]
+    background_names = ["wqq", "zqq", "qcd", "tqq", "hbb"]
     for i, bkg in enumerate(background_names):
         if bkg == 'qcd':
             qcd_fail = f.Get('qcd_fail')

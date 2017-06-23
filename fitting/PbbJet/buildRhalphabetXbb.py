@@ -34,7 +34,7 @@ import DAZSLE.PhiBBPlusJet.analysis_configuration as config
 def get_sf(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1):
     SF = 1.
     print process, cat
-    if 'hqq' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
+    if 'hbb' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
         if 'pass' in cat:
             SF *= sfs[jet_type]["BB"]
             if 'zqq' in process:
@@ -46,7 +46,7 @@ def get_sf(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1
                 SF *= (1. + (1. - sfs[jet_type]["BB"]) * passInt / failInt)
                 if 'zqq' in process:
                     print (1. + (1. - sfs[jet_type]["BB"]) * passInt / failInt)
-    if 'wqq' in process or 'zqq' in process or 'hqq' in process or 'Pbb' in process or 'Sbb' in process:
+    if 'wqq' in process or 'zqq' in process or 'hbb' in process or 'Pbb' in process or 'Sbb' in process:
         SF *= sfs[jet_type]["V"]
         if 'zqq' in process:
             print sfs[jet_type]["V"]
@@ -65,15 +65,15 @@ def get_sf(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1
         if 'zqq' in process:
             print passInt / passIntLoose
     # remove cross section from MH=125 signal templates (template normalized to luminosity*efficiency*acceptance)
-    ## if process=='hqq125':
+    ## if process=='hbb125':
     ##     SF *= 1./48.85*5.824E-01
-    ## elif process=='zhqq':
+    ## elif process=='zhbb':
     ##     SF *= 1./(8.839E-01*(1.-3.*0.0335962-0.201030)*5.824E-01+8.839E-01*5.824E-01*0.201030+1.227E-01*5.824E-01*0.201030+1.227E-01*5.824E-01*0.201030)
-    ## elif process=='whqq':
+    ## elif process=='whbb':
     ##     SF *= 1./(5.328E-01*(1.-3.*0.108535)*5.824E-01+8.400E-01*(1.-3.*0.108535)*5.824E-01)
-    ## elif process=='vbfhqq':
+    ## elif process=='vbfhbb':
     ##     SF *= 1./(3.782*5.824E-01)
-    ## elif process=='tthqq':
+    ## elif process=='tthbb':
     ##     SF *= 1./(5.071E-01*5.824E-01)
 
     # if 'zqq' in process:
@@ -159,11 +159,6 @@ def load_histograms(input_file, mass_range, rho_range, jet_type=None, pseudo=Fal
     # signals
     pass_hists_sig = {}
     fail_hists_sig = {}
-    # for Pbb
-    # masses = [50, 75, 125, 100, 150, 250, 300]
-    # sigs = ['Pbb_']
-    # signal_names = []
-    # for Hbb
 
     for signal_name in config.signal_names:
         print "[debug] Getting " + signal_name + "_pass"

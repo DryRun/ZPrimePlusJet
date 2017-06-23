@@ -30,7 +30,7 @@ def main(options,args):
 		tfile = r.TFile.Open(options.ifile)
 		boxes = ['pass', 'fail']
 		sigs = [signal_name]
-		bkgs = ['zqq','wqq','qcd','tqq']
+		bkgs = ['zqq','wqq','qcd','tqq','hbb']
 		systs = [] #['JER','JES']
 
 		nBkgd = len(bkgs)

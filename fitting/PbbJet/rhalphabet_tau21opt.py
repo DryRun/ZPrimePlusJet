@@ -3,15 +3,19 @@ import sys
 from glob import glob
 from joblib import Parallel, delayed
 
-step0 = True # makeCardsXbb
-step1 = False # buildRhalphabetXbb
-step2 = False # combineCards.py and call combine
+from ROOT import *
+gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/slc6_amd64_gcc491/libDAZSLEPhiBBPlusJet.so"))
+import DAZSLE.PhiBBPlusJet.analysis_configuration as config
 
-tau21_values = [0.4, 0.45, 0.5, 0.525, 0.55, 0.575, 0.6, 0.65, 0.7] # 
+step0 = False # makeCardsXbb
+step1 = False # buildRhalphabetXbb
+step2 = True # combineCards.py and call combine
+
+tau21_values = [0.4, 0.45, 0.5, 0.525, 0.55, 0.575, 0.6, 0.65, 0.7] #   
 dcsv_values = [0.7, 0.75, 0.8, 0.85, 0.875, 0.9, 0.925, 0.95, 0.975]
 #tau21_values = [0.55]
 #dcsv_values = [0.9]
-jet_types = ["AK8"] # CA15
+jet_types = ["AK8", "CA15"] # CA15
 
 def run_single(tau_21, dcsv, jet_type):
 	print "On {}/{}/{}".format(tau_21, dcsv, jet_type)
@@ -46,27 +50,37 @@ def run_single(tau_21, dcsv, jet_type):
 		#os.system("python writeMuonCRDatacardXbb.py -i {} -o {}/cards_mcstat/".format(directory, directory))
 	elif step2:
 		cwd = os.getcwd()
-		print "[debug] Glob pattern = " + directory + "/cards_mcstat/*Sbb*"
-		signal_dirs = glob(directory + "/cards_mcstat/*Sbb*")
-		print "List of signal directories:"
-		print signal_dirs
-		for signal_dir in signal_dirs:
-			print "Working directory: " + signal_dir
+		#print "[debug] Glob pattern = " + directory + "/cards_mcstat/*Sbb*"
+		#signal_dirs = glob(directory + "/cards_mcstat/*Sbb*")
+		#print "List of signal directories:"
+		#print signal_dirs
+		#for signal_dir in signal_dirs:
+		working_directory = directory + "/cards_mcstat/"
+		os.chdir(working_directory)
+		run_script = open("{}/run_combine.sh".format(working_directory), "w")
+		run_script.write("#!/bin/bash\n")
+		datacards = []
+		signal_masses = []
+		for signal_name in config.signal_names:
+			signal_dir = directory + "/cards_mcstat/" + signal_name
+			#print "Working directory: " + signal_dir
 			os.chdir(signal_dir)
-			os.system("cp ../*base.root .")
-			os.system("combineCards.py card_rhalphabet_cat1.txt card_rhalphabet_cat2.txt card_rhalphabet_cat3.txt card_rhalphabet_cat4.txt  card_rhalphabet_cat5.txt card_rhalphabet_cat6.txt   >  card_rhalphabet.txt")
-			# Make and submit condor job
-			run_script = open("{}/run_combine.sh".format(signal_dir), "w")
-			run_script.write("#!/bin/bash\n")
-			run_script.write("combine -M Asymptotic -v 2 -t -1 card_rhalphabet.txt 2>&1 | tee combine_log.txt\n")
-			run_script.close()
-			csub_script = open("{}/submit.sh".format(signal_dir), "w")
-			csub_script.write("#!/bin/bash\n")
-			csub_script.write("csub run_combine.sh --cmssw --no_retar -F card_rhalphabet.txt,base.root,rhalphabase.root\n")
-			csub_script.close()
-			os.system("source {}/submit.sh".format(signal_dir))
-			os.chdir(cwd)
-
+			#os.system("cp ../*base.root .")
+			os.system("combineCards.py card_rhalphabet_cat1.txt card_rhalphabet_cat2.txt card_rhalphabet_cat3.txt card_rhalphabet_cat4.txt  card_rhalphabet_cat5.txt card_rhalphabet_cat6.txt   >  card_rhalphabet_{}.txt".format(signal_name))
+			datacards.append("{}/card_rhalphabet_{}.txt".format(signal_dir, signal_name))
+			signal_masses.append(str(config.signal_masses[signal_name]))
+			os.chdir(working_directory)
+		run_script.write("datacards=( " + " ".join([os.path.basename(x) for x in datacards]) + " )\n")
+		run_script.write("signal_names=( " + " ".join(config.signal_names) + " )\n")
+		run_script.write("signal_masses=( " + " ".join(signal_masses) + " )\n")
+		run_script.write("combine -M Asymptotic -v 0 -n ${signal_names[$1]} -t -1 ${datacards[$1]} 2>&1 | tee combine_log_${signal_names[$1]}.txt\n") # -m ${signal_masses[$1]}
+		run_script.close()
+		csub_script = open("{}/submit.sh".format(working_directory), "w")
+		csub_script.write("#!/bin/bash\n")
+		csub_script.write("csub run_combine.sh --cmssw --no_retar -F {},base.root,rhalphabase.root --queue_n {}\n".format(",".join(datacards), len(datacards)))
+		csub_script.close()
+		os.system("source {}/submit.sh".format(working_directory))
+		os.chdir(cwd)
 
 Parallel(n_jobs=8)(delayed(run_single)(tau_21, dcsv, jet_type) for tau_21 in tau21_values for dcsv in dcsv_values for jet_type in jet_types)
 
