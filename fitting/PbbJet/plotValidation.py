@@ -36,12 +36,12 @@ def main(options, args):
     systs = ['scale','smear','trigger'] # JER','JES
     #systs = ['JER','JES','scale','smear','trigger','Pu']
     
-    numberOfMassBins = 23    
-    numberOfPtBins = 6
-    for box in boxes:
-        for proc in (bkgs+sigs):
-            for i in range(1,numberOfMassBins+1):
-                systs.append('%s%s%s%i'%(proc,box.replace('_',''),'mcstat',i))        
+    #numberOfMassBins = 23    
+    #numberOfPtBins = 6
+    #for box in boxes:
+    #    for proc in (bkgs+sigs):
+    #        for i in range(1,numberOfMassBins+1):
+    #            systs.append('%s%s%s%i'%(proc,box.replace('_',''),'mcstat',i))        
 
     shapes = {}
     
@@ -92,9 +92,10 @@ def main(options, args):
                 tLeg.AddEntry(tmphUp,"%s +%i#sigma"%(syst,nsigma),"l")
                 tLeg.AddEntry(tmphDown,"%s -%i#sigma"%(syst,nsigma),"l")
                 tLeg.Draw('same')
-                c.Print('%s/%s_%s_%s.pdf'%(options.odir,proc,box,syst))
-                c.Print('%s/%s_%s_%s.C'%(options.odir,proc,box,syst))
-                c.Print('%s/png/%s_%s_%s.png'%(options.odir,proc,box,syst))
+                #c.Print('%s/%s_%s_%s.pdf'%(options.odir,proc,box,syst))
+                #c.Print('%s/%s_%s_%s.C'%(options.odir,proc,box,syst))
+                c.Print('%s/%s_%s_%s.gif'%(options.odir,proc,box,syst))
+                #c.Print('%s/png/%s_%s_%s.png'%(options.odir,proc,box,syst))
             
     
 if __name__ == '__main__':

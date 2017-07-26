@@ -820,6 +820,7 @@ class RhalphabetBuilder():
             import_object.Print()
             process = import_object.GetName().split('_')[0]
             cat = import_object.GetName().split('_')[1]
+            print 'Anter Object : ', import_object.GetName(), 'Process : ', process, 'Cat : ',cat
             mass = 0
             systematics = ['JES', 'JER', 'Trigger', 'mcstat'] # Pu
             if do_syst and ('tqq' in process or 'wqq' in process or 'zqq' in process or 'hbb' in process or "Sbb" in process):
