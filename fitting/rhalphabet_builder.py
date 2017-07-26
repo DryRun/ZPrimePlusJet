@@ -19,12 +19,8 @@ r.gSystem.Load(os.getenv('CMSSW_BASE')+'/lib/'+os.getenv('SCRAM_ARCH')+'/libHigg
 # including other directories
 import tools as tools
 from DAZSLE.ZPrimePlusJet.RootIterator import RootIterator
+from DAZSLE.ZPrimePlusJet.xbb_config import analysis_parameters as params
 from hist import *
-
-BB_SF = 0.91
-BB_SF_ERR = 0.03
-V_SF = 0.993
-V_SF_ERR = 0.043
 
 re_sbb = re.compile("Sbb(?P<mass>\d+)")
 
@@ -1213,25 +1209,25 @@ def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_
     return (pass_hists, fail_hists)
 
 
-def GetSF(process, cat, f, fLoose=None, removeUnmatched=False, iPt=-1):
+def GetSF(process, cat, f, fLoose=None, removeUnmatched=False, iPt=-1, jet_type="AK8"):
     SF = 1.
     print process, cat
     if 'hqq' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
         if 'pass' in cat:
-            SF *= BB_SF
+            SF *= params[jet_type]["BB_SF"]
             if 'zqq' in process:
-                print BB_SF
+                print params[jet_type]["BB_SF"]
         else:
             passInt = f.Get(process + '_pass').Integral()
             failInt = f.Get(process + '_fail').Integral()
             if failInt > 0:
-                SF *= (1. + (1. - BB_SF) * passInt / failInt)
+                SF *= (1. + (1. - params[jet_type]["BB_SF"]) * passInt / failInt)
                 if 'zqq' in process:
-                    print (1. + (1. - BB_SF) * passInt / failInt)
+                    print (1. + (1. - params[jet_type]["BB_SF"]) * passInt / failInt)
     if 'wqq' in process or 'zqq' in process or 'hqq' in process or 'Pbb' in process or 'Sbb' in process:
-        SF *= V_SF
+        SF *= params[jet_type]["V_SF"]
         if 'zqq' in process:
-            print V_SF
+            print params[jet_type]["V_SF"]
     matchingString = ''
     if removeUnmatched and ('wqq' in process or 'zqq' in process):
         matchingString = '_matched'
