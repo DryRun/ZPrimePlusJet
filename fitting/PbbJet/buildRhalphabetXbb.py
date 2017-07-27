@@ -24,8 +24,7 @@ from hist import *
 from rhalphabet_builder import RhalphabetBuilder
 
 gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJet.so"))
-from DAZSLE.PhiBBPlusJet.cuts import cuts
-from DAZSLE.PhiBBPlusJet.sfs import sfs
+from DAZSLE.ZPrimePlusJet.xbb_config import analysis_parameters as params
 import DAZSLE.PhiBBPlusJet.analysis_configuration as config
 
 # Scale factors for MC
@@ -36,20 +35,20 @@ def get_sf(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1
     print process, cat
     if 'hbb' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
         if 'pass' in cat:
-            SF *= sfs[jet_type]["BB"]
+            SF *= params[jet_type]["BB_SF"]
             if 'zqq' in process:
-                print sfs[jet_type]["BB"]
+                print params[jet_type]["BB_SF"]
         else:
             passInt = f.Get(process + '_pass').Integral()
             failInt = f.Get(process + '_fail').Integral()
             if failInt > 0:
-                SF *= (1. + (1. - sfs[jet_type]["BB"]) * passInt / failInt)
+                SF *= (1. + (1. - sfs[jet_type]["BB_SF"]) * passInt / failInt)
                 if 'zqq' in process:
-                    print (1. + (1. - sfs[jet_type]["BB"]) * passInt / failInt)
+                    print (1. + (1. - sfs[jet_type]["BB_SF"]) * passInt / failInt)
     if 'wqq' in process or 'zqq' in process or 'hbb' in process or 'Pbb' in process or 'Sbb' in process:
-        SF *= sfs[jet_type]["V"]
+        SF *= params[jet_type]["V_SF"]
         if 'zqq' in process:
-            print sfs[jet_type]["V"]
+            print params[jet_type]["V_SF"]
     matchingString = ''
     if removeUnmatched and ('wqq' in process or 'zqq' in process):
         matchingString = '_matched'
@@ -89,7 +88,7 @@ def get_sf(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1
 # pseudo          = Substitute pseudodata constructed from MC for real data
 # useQCD = For QCD pass, use MC prediction instead of fail * (pass int / fail int)
 # fLoose = 
-def load_histograms(input_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None):
+def load_histograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None):
     pass_hists = {}
     fail_hists = {}
     #f.ls()
@@ -160,9 +159,32 @@ def load_histograms(input_file, mass_range, rho_range, jet_type=None, pseudo=Fal
     pass_hists_sig = {}
     fail_hists_sig = {}
 
-    for signal_name in config.signal_names:
+    for signal_name in config.simulated_signal_names:
         print "[debug] Getting " + signal_name + "_pass"
+        if signal_masses[signal_name]
         if not input_file.Get(signal_name + "_pass"):
+            print "[LoadHistograms] ERROR : Couldn't load histogram " + signal_name + "_pass" + " from file " + input_file.GetPath()
+            sys.exit(1)
+        passhist = input_file.Get(signal_name + "_pass").Clone()
+        failhist = input_file.Get(signal_name + "_fail").Clone()
+        for hist in [passhist, failhist]:
+            for i in range(0, hist.GetNbinsX() + 2):
+                for j in range(0, hist.GetNbinsY() + 2):
+                    if hist.GetBinContent(i, j) <= 0:
+                        hist.SetBinContent(i, j, 0)
+        failhist.Scale(1. / scale)
+        passhist.Scale(1. / scale)
+        failhist.Scale(get_sf(signal_name, 'fail', jet_type, input_file))
+        passhist.Scale(get_sf(signal_name, 'pass', jet_type, input_file))
+
+        pass_hists_sig[signal_name] = passhist
+        fail_hists_sig[signal_name] = failhist
+        #signal_names.append(signal_name)
+
+    for signal_name in config.interpolated_signal_names:
+        print "[debug] Getting " + signal_name + "_pass"
+        if signal_masses[signal_name]
+        if not interpolation_file.Get(signal_name + "_pass"):
             print "[LoadHistograms] ERROR : Couldn't load histogram " + signal_name + "_pass" + " from file " + input_file.GetPath()
             sys.exit(1)
         passhist = input_file.Get(signal_name + "_pass").Clone()
@@ -234,12 +256,13 @@ def load_histograms(input_file, mass_range, rho_range, jet_type=None, pseudo=Fal
 
 def main(options, args):
     input_file = TFile(options.ifile, "READ")
+    interpolation_file = TFile(options.interpolation_file, "READ")
     odir = options.odir
 
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists) = load_histograms(input_file, cuts[options.jet_type]["MSD"], cuts[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo)
+    (pass_hists,fail_hists) = load_histograms(input_file, interpolation_file, cuts[options.jet_type]["MSD"], cuts[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo)
 
     # Build the workspacees
     #dazsleRhalphabetBuilder(hpass, hfail, f, odir, options.NR, options.NP)
@@ -248,6 +271,7 @@ def main(options, args):
     rhalphabuilder.run()
 
     input_file.Close()
+    interpolation_file.Close()
 
 ##-------------------------------------------------------------------------------------
 if __name__ == '__main__':

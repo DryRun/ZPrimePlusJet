@@ -61,7 +61,7 @@ def run_single(tau_21, dcsv, jet_type):
 		run_script.write("#!/bin/bash\n")
 		datacards = []
 		signal_masses = []
-		for signal_name in config.signal_names:
+		for signal_name in config.simulated_signal_names:
 			signal_dir = directory + "/cards_mcstat/" + signal_name
 			#print "Working directory: " + signal_dir
 			os.chdir(signal_dir)
@@ -71,7 +71,7 @@ def run_single(tau_21, dcsv, jet_type):
 			signal_masses.append(str(config.signal_masses[signal_name]))
 			os.chdir(working_directory)
 		run_script.write("datacards=( " + " ".join([os.path.basename(x) for x in datacards]) + " )\n")
-		run_script.write("signal_names=( " + " ".join(config.signal_names) + " )\n")
+		run_script.write("signal_names=( " + " ".join(config.simulated_signal_names) + " )\n")
 		run_script.write("signal_masses=( " + " ".join(signal_masses) + " )\n")
 		run_script.write("combine -M Asymptotic -v 0 -n ${signal_names[$1]} -t -1 ${datacards[$1]} 2>&1 | tee combine_log_${signal_names[$1]}.txt\n") # -m ${signal_masses[$1]}
 		run_script.close()
