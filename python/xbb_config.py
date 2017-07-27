@@ -42,7 +42,6 @@ for model in ["Sbb", "PSbb"]:
 interpolated_signal_masses = [x for x in range(50, 525, 25) if not x in signal_model_masses]
 interpolated_signal_names = []
 for model in ["Sbb", "PSbb"]:
-	interpolated_signal_masses[model] = 
 	for mass in interpolated_signal_masses:
 		this_signal_name = "{}{}".format(model, mass)
 		signal_names.append(this_signal_name)
