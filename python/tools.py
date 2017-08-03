@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import ROOT as r,sys,math,array,os
-from hist import hist
 from optparse import OptionParser
 from ROOT import std,RooDataHist
 
