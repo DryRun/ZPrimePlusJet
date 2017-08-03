@@ -9,10 +9,8 @@ import time
 import array
 import os
 
-from DAZSLE.ZPrimePlusJet.xbb_config import analysis_parameters as params 
-import DAZSLE.PhiBBPlusJet.analysis_config as config
-
-from rhalphabet_builder import GetSF
+import DAZSLE.ZPrimePlusJet.xbb_config as config
+from DAZSLE.ZPrimePlusJet.rhalphabet_builder import GetSF
 
 def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_path):
 	obsRate = {}
@@ -36,6 +34,7 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 	jesErrs = {}
 	jerErrs = {}
 	puErrs = {}
+	print sigs+bkgs
 	for proc in sigs+bkgs:
 		for box in boxes:
 			process_name = "{}_{}".format(proc, box)
@@ -43,19 +42,19 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 			rate = histograms[process_name].IntegralAndError(1,histograms[process_name].GetNbinsX(),error)
 			rates[process_name]  = rate
 			lumiErrs[process_name] = 1.025
-			if proces == "hbb":
+			if proc == "hbb":
 				hbb125ptErrs[process_name] = 1.3
 			else:
 				hbb125ptErrs[process_name] = 1.0
 			if proc=='wqq' or proc=='zqq' or 'hbb' in proc or 'Sbb' in proc:
-				veffErrs[process_name] = 1.0+params[options.jet_type]["V_SF_ERR"]/params[options.jet_type]["V_SF"]
+				veffErrs[process_name] = 1.0+config.analysis_parameters[options.jet_type]["V_SF_ERR"]/config.analysis_parameters[options.jet_type]["V_SF"]
 				if box=='pass':
-					bbeffErrs[process_name] = 1.0+params[options.jet_type]["BB_SF_ERR"]/params[options.jet_type]["BB_SF"]
+					bbeffErrs[process_name] = 1.0+config.analysis_parameters[options.jet_type]["BB_SF_ERR"]/config.analysis_parameters[options.jet_type]["BB_SF"]
 				else:
 					ratePass = histograms['%s_%s'%(proc,'pass')].Integral()
 					rateFail = histograms['%s_%s'%(proc,'fail')].Integral()
 					if rateFail>0:
-						bbeffErrs[process_name] = 1.0-params[options.jet_type]["BB_SF_ERR"]*(ratePass/rateFail)
+						bbeffErrs[process_name] = 1.0-config.analysis_parameters[options.jet_type]["BB_SF_ERR"]*(ratePass/rateFail)
 					else:
 						bbeffErrs[process_name] = 1.0
 					
@@ -88,8 +87,8 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 				rateJESDown = histograms['{}_JESDown'.format(process_name)].Integral()
 				rateJERUp = histograms['{}_JERUp'.format(process_name)].Integral()
 				rateJERDown = histograms['{}_JERDown'.format(process_name)].Integral()
-				ratePuUp = histograms["{}_PuUp".format(process_name)].Integral()
-				ratePuDown = histograms["{}_PuDown".format(process_name)].Integral()
+				ratePuUp = histograms["{}_PUUp".format(process_name)].Integral()
+				ratePuDown = histograms["{}_PUDown".format(process_name)].Integral()
 				jesErrs[process_name] =  1.0+(abs(rateJESUp-rate)+abs(rateJESDown-rate))/(2.*rate)   
 				jerErrs[process_name] =  1.0+(abs(rateJERUp-rate)+abs(rateJERDown-rate))/(2.*rate)
 				puErrs[process_name] =  1.0+(abs(ratePuUp-rate)+abs(ratePuDown-rate))/(2.*rate)
@@ -116,7 +115,7 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 	processNumberString = 'process'
 	rateString = 'rate'
 	lumiString = 'lumi\tlnN'
-	hqq125ptString = 'hqq125pt\tlnN'
+	hbb125ptString = 'hqq125pt\tlnN'
 	veffString = 'veff\tlnN'
 	bbeffString = 'bbeff\tlnN'
 	znormEWString = 'znormEWmuonCR\tlnN'
@@ -133,37 +132,61 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 	mcStatErrString = {}
 	for proc in sigs+bkgs:
 		for box in boxes:
+			process_name = "{}_{}".format(proc, box)
 			mcStatErrString[process_name] = '%s%smuonCRmcstat\tlnN'%(proc,box)
 
 	for box in boxes:
 		i = -1
 		for proc in sigs+bkgs:
+			process_name = "{}_{}".format(proc, box)
 			i+=1
-			if rates[process_name] <= 0.0: continue
-			binString +='\t%s_muonCR\n'%box
-			processString += '\t%s\n'%(proc)
-			processNumberString += '\t%i\n'%(i-nSig+1)
-			rateString += '\t%.3f\n'%rates[process_name]
-			lumiString += '\t%.3f\n'%lumiErrs[process_name]
-			hqq125ptString += '\t%.3f\n'%hqq125ptErrs[process_name]
-			veffString += '\t%.3f\n'%veffErrs[process_name]
-			bbeffString += '\t%.3f\n'%bbeffErrs[process_name]
-			znormEWString += '\t%.3f\n'%znormEWErrs[process_name]
-			znormQString += '\t%.3f\n'%znormQErrs[process_name]
-			wznormEWString += '\t%.3f\n'%wznormEWErrs[process_name]
-			mutriggerString += '\t%.3f\n'%mutriggerErrs[process_name]
-			muidString += '\t%.3f\n'%muidErrs[process_name]
-			muisoString += '\t%.3f\n'%muisoErrs[process_name]
-			jesString += '\t%.3f\n'%jesErrs[process_name]
-			jerString += '\t%.3f\n'%jerErrs[process_name]
-			puString += '\t%.3f\n'%puErrs[process_name]
+			if rates[process_name] <= 0.0: 
+				print "Skipping process {} in datacard because rate = {}".format(process_name, rates[process_name])
+				continue
+			binString +='\t%s_muonCR'%box
+			processString += '\t%s'%(proc)
+			processNumberString += '\t%i'%(i-nSig+1)
+			rateString += '\t%.3f'%rates[process_name]
+			lumiString += '\t%.3f'%lumiErrs[process_name]
+			hbb125ptString += '\t%.3f'%hbb125ptErrs[process_name]
+			veffString += '\t%.3f'%veffErrs[process_name]
+			bbeffString += '\t%.3f'%bbeffErrs[process_name]
+			znormEWString += '\t%.3f'%znormEWErrs[process_name]
+			znormQString += '\t%.3f'%znormQErrs[process_name]
+			wznormEWString += '\t%.3f'%wznormEWErrs[process_name]
+			mutriggerString += '\t%.3f'%mutriggerErrs[process_name]
+			muidString += '\t%.3f'%muidErrs[process_name]
+			muisoString += '\t%.3f'%muisoErrs[process_name]
+			jesString += '\t%.3f'%jesErrs[process_name]
+			jerString += '\t%.3f'%jerErrs[process_name]
+			puString += '\t%.3f'%puErrs[process_name]
 			for proc1 in sigs+bkgs:
 				for box1 in boxes:
 					if proc1==proc and box1==box:
-						mcStatErrString['%s_%s'%(proc1,box1)] += '\t%.3f\n'% mcStatErrs[process_name]
+						print mcStatErrs
+						mcStatErrString['%s_%s'%(proc1,box1)] += '\t%.3f'% mcStatErrs[process_name]
 					else:                        
-						mcStatErrString['%s_%s'%(proc1,box1)] += '\t-\n'
-			
+						mcStatErrString['%s_%s'%(proc1,box1)] += '\t-'
+	binString += "\n"
+	processString += "\n"
+	processNumberString += "\n"
+	rateString += "\n"
+	lumiString += "\n"
+	hbb125ptString += "\n"
+	veffString += "\n"
+	bbeffString += "\n"
+	znormEWString += "\n"
+	znormQString += "\n"
+	wznormEWString += "\n"
+	mutriggerString += "\n"
+	muidString += "\n"
+	muisoString += "\n"
+	jesString += "\n"
+	jerString += "\n"
+	puString += "\n"
+	for proc in (sigs+bkgs):
+		for box in boxes:
+			mcStatErrString['%s_%s'%(proc,box)] += '\n'
 	datacard_file.write(binString)
 	datacard_file.write(processString)
 	datacard_file.write(processNumberString)
@@ -172,7 +195,7 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 
 	# now nuisances
 	datacard_file.write(lumiString)
-	datacard_file.write(hqq125ptString)
+	datacard_file.write(hbb125ptString)
 	datacard_file.write(veffString)
 	datacard_file.write(bbeffString)
 	datacard_file.write(znormEWString)
@@ -206,9 +229,9 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 def main(options, args):
 	boxes = ['pass', 'fail']
 	bkgs = ['zqq','wqq','qcd','tqq','vvqq','stqq','wlnu','zll', "hbb"]
-	for signal_name in config.signal_names:
+	for signal_name in config.simulated_signal_names:
 		sigs = [signal_name]
-		systs = ['JER','JES','mutrigger','muid','muiso','Pu']
+		systs = ['JER','JES','MuTrigger','MuID','MuIso','PU']
 		
 		input_file = TFile.Open(options.idir+'/histograms_muCR_{}.root'.format(options.jet_type),'read')
 		if not input_file.IsOpen():
@@ -224,9 +247,9 @@ def main(options, args):
 				print 'getting histogram for process: {}'.format(process_name)
 
 				if not input_file.Get(process_name):
-					print "ERROR: Can't load histogram {} from file {}".format(process_name, input_file.GetPath())
+					print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name, input_file.GetPath())
 					sys.exit(1)
-				histograms[process_name] = input_file.Get(process_name).Clone()
+				histograms[process_name] = input_file.Get(process_name).ProjectionX()
 				histograms[process_name].Scale(GetSF(proc,box,input_file))
 				for syst in systs:
 					if proc!='data_obs':
@@ -234,31 +257,32 @@ def main(options, args):
 							process_name_syst = "{}_{}{}".format(process_name, syst, direction)
 							print 'getting histogram for process: {}'.format(process_name_syst)
 							if not input_file.Get(process_name_syst):
-								print "ERROR : Can't load histogram {} from file {}".format(process_name_syst, input_file.GetPath())
+								print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name_syst, input_file.GetPath())
 								sys.exit(1)
-							histograms[process_name_syst] = input_file.Get(process_name_syst).Clone()
+							histograms[process_name_syst] = input_file.Get(process_name_syst).ProjectionX()
 							histograms[process_name_syst].Scale(GetSF(proc,box,input_file))
 						
 		outFile = 'datacard_muonCR.root'
 		
-		workspace_path = "{}/{}/{}".format(options.odir, sig, "workspace_muonCR.root")
-		datacard_path = "{}/{}/{}".format(options.odir, sig, "datacard_muonCR.txt")
-		outputFile = rt.TFile.Open(workspace_path,'recreate')
+		os.system("mkdir -pv {}/{}".format(options.odir, signal_name))
+		workspace_path = "{}/{}/{}".format(options.odir, signal_name, "workspace_muonCR.root")
+		datacard_path = "{}/{}/{}".format(options.odir, signal_name, "datacard_muonCR.txt")
+		outputFile = TFile.Open(workspace_path,'recreate')
 		outputFile.cd()
-		w = rt.RooWorkspace('w_muonCR')
+		w = RooWorkspace('w_muonCR')
 		#w.factory('y[40,40,201]')
 		#w.var('y').setBins(1)
-		w.factory('x[%i,%i,%i]'%(params[options.jet_type]["MSD"][0],params[options.jet_type]["MSD"][0],params[options.jet_type]["MSD"][1]))
-		w.var('x').setBins(params[options.jet_type]["MASS_BIN"])
+		w.factory('x[%i,%i,%i]'%(config.analysis_parameters[options.jet_type]["MSD"][0], config.analysis_parameters[options.jet_type]["MSD"][0],config.analysis_parameters[options.jet_type]["MSD"][1]))
+		w.var('x').setBins(config.analysis_parameters[options.jet_type]["MASS_BINS"])
 		for key, histo in histograms.iteritems():
 			#histo.Rebin(23)
-			#ds = rt.RooDataHist(key,key,rt.RooArgList(w.var('y')),histo)
-			ds = rt.RooDataHist(key,key,rt.RooArgList(w.var('x')),histo)
-			getattr(w,'import')(ds, rt.RooCmdArg())
+			#ds = RooDataHist(key,key,RooArgList(w.var('y')),histo)
+			ds = RooDataHist(key,key,RooArgList(w.var('x')),histo)
+			getattr(w,'import')(ds, RooCmdArg())
 		w.Write()
 		outputFile.Close()
 
-		writeDataCard(boxes,workspace_path,[sig],bkgs,histograms,options,datacard_path)
+		writeDataCard(boxes,workspace_path,[signal_name],bkgs,histograms,options,datacard_path)
 		print '\ndatacard:\n'
 		os.system('cat {}'.format(datacard_path))
 
@@ -266,10 +290,8 @@ def main(options, args):
 
 if __name__ == '__main__':
 	parser = OptionParser()
-	parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
-	parser.add_option('--lumi', dest='lumi', type=float, default = 20,help='lumi in 1/fb ', metavar='lumi')
-	parser.add_option('-i','--idir', dest='idir', default = './',help='directory with data', metavar='idir')
-	parser.add_option('-o','--odir', dest='odir', default = './',help='directory to write cards', metavar='odir')
+	parser.add_option('-i','--idir', dest='idir', default='/uscms/home/dryu/DAZSLE/data/LimitSetting/Xbb_inputs/',help='directory with data', metavar='idir')
+	parser.add_option('-o','--odir', dest='odir', help='directory to write cards', metavar='odir')
 	parser.add_option('-j', '--jet_type', dest='jet_type', default="AK8", help="AK8 or CA15")
 	(options, args) = parser.parse_args()
 
