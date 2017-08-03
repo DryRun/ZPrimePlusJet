@@ -42,6 +42,14 @@ class HistogramInterpolator:
       print "[HistogramInterpolator::make_interpolation] ERROR : Interpolation value {} is outside range of input values ({})".format(int_val, self._input_values)
       sys.exit(1)
 
+    # Ensure left and right histograms have entries (RooIntegralMorph crashes otherwise)
+    if self._hists[left_val].Integral() == 0 or self._hists[right_val].Integral() == 0:
+      print "[HistogramInterpolator::make_interpolation] WARNING : Left and/or right histogram has integral zero (left={}, right={}). Setting output to zero.".format(self._hists[left_val].Integral(), self._hists[right_val].Integral())
+      int_hist = self._hists[left_val].Clone()
+      int_hist.SetName("interpolated_hist_{}".format(int_val))
+      int_hist.Reset()
+      return int_hist
+
     # Do morphing using RooIntegralMorph
     alpha = 1. - float(int_val - left_val) / (right_val - left_val)
     print "[HistogramInterpolator::make_interpolation] INFO : Adjacent masses = {}, {}, alpha = {}".format(left_val, right_val, alpha)
