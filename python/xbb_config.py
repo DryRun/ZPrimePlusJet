@@ -1,7 +1,9 @@
+import os
+
 analysis_parameters = {}
 analysis_parameters["AK8"] = {
-	"MASS_BINS":52,
-	"MSD":[40, 404],
+	"MASS_BINS":80,
+	"MSD":[40, 600],
 	"RHO":[-5.5, -2.0],
 	"PT":[450., 1000.],
 	"DCSV":0.9,
@@ -13,8 +15,8 @@ analysis_parameters["AK8"] = {
 	"V_SF_ERR":0.043,
 }
 analysis_parameters["CA15"] = {
-	"MASS_BINS":52,
-	"MSD":[40, 404],
+	"MASS_BINS":80,
+	"MSD":[40, 600],
 	"RHO":[-4.7, -1.0],
 	"PT":[450., 1000.],
 	"DCSV":0.85,
@@ -47,3 +49,32 @@ for model in ["Sbb", "PSbb"]:
 		signal_names.append(this_signal_name)
 		interpolated_signal_names.append(this_signal_name)
 		signal_masses[this_signal_name] = mass
+
+# Masses to be used in limit setting. AK8 can't go above 400 GeV because of no statistics.
+limit_signal_masses = {
+	"AK8":range(50,425,25),
+	"CA15":range(50,525,25)
+}
+limit_signal_names = {"AK8":[], "CA15":[]}
+for jet_type in ["AK8", "CA15"]:
+	for model in ["Sbb", "PSbb"]:
+		for mass in limit_signal_masses[jet_type]:
+			limit_signal_names[jet_type].append("{}{}".format(model, mass))
+
+# File locations
+paths = {
+	"data":os.path.expandvars("$HOME/DAZSLE/data/"),
+	"LimitSetting":os.path.expandvars("$HOME/DAZSLE/data/LimitSetting")
+}
+
+def get_histogram_file(selection, jet_type):
+	return paths["LimitSetting"] + "/Xbb_inputs/histograms_{}_{}.root".format(selection, jet_type)
+
+def get_interpolation_file(jet_type):
+	return paths["LimitSetting"] + "/Xbb_inputs/interpolations_{}.root".format(jet_type)
+
+def get_datacard_directory(signal_name, jet_type, qcd=False):
+	if qcd:
+		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/card_qcd_mcstat/{}".format(jet_type, signal_name)
+	else:
+		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/card_mcstat/{}".format(jet_type, signal_name)
