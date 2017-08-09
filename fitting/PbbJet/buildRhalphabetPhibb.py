@@ -51,8 +51,6 @@ def main(options, args):
     rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, f, options.odir, nr=options.NR, np=options.NP, mass_nbins=MASS_BINS, mass_lo=MASS_LO, mass_hi=MASS_HI, blind_lo=BLIND_LO, blind_hi=BLIND_HI, rho_lo=options.lrho, rho_hi=options.hrho, blind=options.blind, mass_fit=options.massfit, freeze_poly=options.freeze, remove_unmatched=options.removeUnmatched, input_file_loose=fLoose, cuts=options.cuts)
 
     rhalphabuilder.run()
-    if options.addHptShape:
-        rhalphabuilder.addHptShape()	
     if options.prefit:
         rhalphabuilder.prefit()
     elif options.loadfit is not None:
@@ -84,7 +82,6 @@ if __name__ == '__main__':
     parser.add_option('-r', dest='r', default=0, type='float', help='signal strength for MC pseudodataset')
     parser.add_option('--remove-unmatched', action='store_true', dest='removeUnmatched', default =False,help='remove unmatched', metavar='removeUnmatched')
     parser.add_option('--prefit', action='store_true', dest='prefit', default =False,help='do prefit', metavar='prefit')
-    parser.add_option('--addHptShape',action='store_true',dest='addHptShape',default =False,help='add H pt shape unc', metavar='addHptShape')
     parser.add_option('--loadfit', dest='loadfit', default=None, help='load qcd polynomial parameters from alternative rhalphabase.root',metavar='loadfit')
     parser.add_option('--lrho', dest='lrho', default=-6.0, type= 'float', help='low value rho cut')
     parser.add_option('--hrho', dest='hrho', default=-2.1, type='float', help=' high value rho cut')

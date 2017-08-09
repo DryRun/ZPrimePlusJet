@@ -8,77 +8,18 @@ import sys
 import time
 import array
 import re
-import DAZSLE.ZPrimePlusJet.xbb_config as config
 
 #r.gSystem.Load("~/Dropbox/RazorAnalyzer/python/lib/libRazorRun2.so")
 r.gSystem.Load(os.getenv('CMSSW_BASE')+'/lib/'+os.getenv('SCRAM_ARCH')+'/libHiggsAnalysisCombinedLimit.so')
-# r.gInterpreter.GenerateDictionary("std::pair<std::string, RooDataHist*>", "map;string;RooDataHist.h")
-# r.gInterpreter.GenerateDictionary("std::map<std::string, RooDataHist*>", "map;string;RooDataHist.h")
 
 
 # including other directories
 import tools as tools
 from DAZSLE.ZPrimePlusJet.RootIterator import RootIterator
-#from DAZSLE.ZPrimePlusJet.xbb_config import analysis_parameters as params
-from DAZSLE.ZPrimePlusJet.hist import *
+from histogram_container import HistogramContainer, uncorrelate
 
 re_sbb = re.compile("Sbb(?P<mass>\d+)")
 re_ptbin = re.compile("cat(?P<ptbin>\d+)")
-
-# Default function for scale factors. 
-# Can be overloaded with RhalphabetBuilder::set_sf(func).
-def GetSF(process, cat, f, fLoose=None, removeUnmatched=False, iPt=-1, jet_type="AK8"):
-    SF = 1.
-    print process, cat
-    if 'hqq' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
-        if 'pass' in cat:
-            SF *= config.analysis_parameters[jet_type]["BB_SF"]
-            if 'zqq' in process:
-                print config.analysis_parameters[jet_type]["BB_SF"]
-        else:
-            if not f.Get(process + '_pass'):
-                print "[GetSF] ERROR : Couldn't find histogram {}_pass in file {}".format(process, f.GetPath())
-            passInt = f.Get(process + '_pass').Integral()
-            failInt = f.Get(process + '_fail').Integral()
-            if failInt > 0:
-                SF *= (1. + (1. - config.analysis_parameters[jet_type]["BB_SF"]) * passInt / failInt)
-                if 'zqq' in process:
-                    print (1. + (1. - config.analysis_parameters[jet_type]["BB_SF"]) * passInt / failInt)
-    if 'wqq' in process or 'zqq' in process or 'hqq' in process or 'Pbb' in process or 'Sbb' in process:
-        SF *= config.analysis_parameters[jet_type]["V_SF"]
-        if 'zqq' in process:
-            print config.analysis_parameters[jet_type]["V_SF"]
-    matchingString = ''
-    if removeUnmatched and ('wqq' in process or 'zqq' in process):
-        matchingString = '_matched'
-    if fLoose is not None and ('wqq' in process or 'zqq' in process) and 'pass' in cat:
-        if iPt > -1:
-            nbinsX = f.Get(process + '_pass' + matchingString).GetXaxis().GetNbins()
-            passInt = f.Get(process + '_pass' + matchingString).Integral(1, nbinsX, int(iPt), int(iPt))
-            passIntLoose = fLoose.Get(process + '_pass' + matchingString).Integral(1, nbinsX, int(iPt), int(iPt))
-        else:
-            passInt = f.Get(process + '_pass' + matchingString).Integral()
-            passIntLoose = fLoose.Get(process + '_pass' + matchingString).Integral()
-        SF *= passInt / passIntLoose
-        if 'zqq' in process:
-            print passInt / passIntLoose
-    # remove cross section from MH=125 signal templates (template normalized to luminosity*efficiency*acceptance)
-    ## if process=='hqq125':
-    ##     SF *= 1./48.85*5.824E-01
-    ## elif process=='zhqq':
-    ##     SF *= 1./(8.839E-01*(1.-3.*0.0335962-0.201030)*5.824E-01+8.839E-01*5.824E-01*0.201030+1.227E-01*5.824E-01*0.201030+1.227E-01*5.824E-01*0.201030)
-    ## elif process=='whqq':
-    ##     SF *= 1./(5.328E-01*(1.-3.*0.108535)*5.824E-01+8.400E-01*(1.-3.*0.108535)*5.824E-01)
-    ## elif process=='vbfhqq':
-    ##     SF *= 1./(3.782*5.824E-01)
-    ## elif process=='tthqq':
-    ##     SF *= 1./(5.071E-01*5.824E-01)
-
-    # if 'zqq' in process:
-    #    print SF
-    #    sys.exit()
-    return SF
-
 
 ##############################################################################
 ##############################################################################
@@ -88,8 +29,7 @@ def GetSF(process, cat, f, fLoose=None, removeUnmatched=False, iPt=-1, jet_type=
 
 class RhalphabetBuilder():
     def __init__(self, pass_hists, fail_hists, input_file, out_dir, nr=2, np=1, mass_nbins=23, mass_lo=40, mass_hi=201,
-                 blind_lo=110, blind_hi=131, rho_lo=-6, rho_hi=-2.1, blind=False, mass_fit=False, freeze_poly=False,
-                 remove_unmatched=False, input_file_loose=None, interpolation_file=None, quiet=False, signal_names=None):
+                 blind_lo=110, blind_hi=131, rho_lo=-6, rho_hi=-2.1, blind=False, mass_fit=False, freeze_poly=False, quiet=False, signal_names=None, background_names=["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]):
         self._quiet = quiet
         self._pass_hists = pass_hists
         self._fail_hists = fail_hists
@@ -103,8 +43,6 @@ class RhalphabetBuilder():
         self._mass_fit = mass_fit
         self._freeze = freeze_poly
         self._inputfile = input_file
-        self._inputfile_loose = input_file_loose
-        self._interpolation_file = interpolation_file
         self._systematics = ['JES', 'JER', 'trigger', 'mcstat','Pu', "scalept", "smear"]
 
         self._output_path = "{}/base.root".format(out_dir)
@@ -124,7 +62,6 @@ class RhalphabetBuilder():
         # self._mass_lo    = pass_hists[0].GetXaxis().GetBinLowEdge( 1 )
         # self._mass_hi    = pass_hists[0].GetXaxis().GetBinUpEdge( self._mass_nbins )
 
-        self._remove_unmatched = remove_unmatched
         if not self._quiet:
             print "number of mass bins and lo/hi: ", self._mass_nbins, self._mass_lo, self._mass_hi;
 
@@ -172,7 +109,7 @@ class RhalphabetBuilder():
         self._all_data = []
         self._all_pars = []
 
-        self._background_names = ["wqq", "zqq", "qcd", "tqq", "hbb"]
+        self._background_names = background_names
         self._signal_names = signal_names
         # for Pbb
         #for mass in [50,75,125,100,150,200,250,300]:
@@ -183,16 +120,17 @@ class RhalphabetBuilder():
         #for mass in [125]:
         #    for sig in ["hqq", "zhqq", "whqq", "vbfhqq", "tthqq"]:
         #        self._signal_names.append(sig + str(mass))
-        
-        self._sf_func = GetSF
 
-    def set_sf(func):
-        self._sf_func = func
+    def set_background_names(self, background_names):
+        self._background_names = background_names
+
+    def set_signal_names(self, signal_names):
+        self._signal_names = signal_names
 
     # Add systematics, for systematics involving histograms
     # - systematics = list of systematics e.g. ["JER", "JES", "mcstat", ...]
     # - pass_hists_syst, fail_hists_syst = dictionaries, e.g. {"JERUp":h_jerup, "JERDown":h_jerdown, ...}
-    def add_systematics(systematics, pass_hists_syst, fail_hists_syst):
+    def add_systematics(self, systematics, pass_hists_syst, fail_hists_syst):
         # Check that the list of systematics corresponds to the histograms
         for syst in systematics:
             for direction in ["Up", "Down"]:
@@ -207,6 +145,25 @@ class RhalphabetBuilder():
         self._fail_hists_syst = fail_hists_syst
         print "[RhalphabetBuilder::add_systematics_histograms] INFO : Including systematics: ",
         print self._systematics
+
+    def set_poly_order(self, nr, np):
+        self._poly_degree_rho = nr  # 1 = linear ; 2 is quadratic
+        self._poly_degree_pt = np  # 1 = linear ; 2 is quadratic
+
+    def set_mass_bins(self, mass_nbins, mass_lo, mass_hi):
+        self._mass_nbins = mass_nbins
+        self._mass_lo = mass_lo
+        self._mass_hi = mass_hi
+
+    def set_blind_range(self, blind_lo, blind_hi):
+        blind = True
+        self._mass_blind_lo = blind_lo
+        self._mass_blind_hi = blind_hi
+
+    def set_rho_range(self, rho_lo, rho_hi):
+        self._rho_lo = rho_lo
+        self._rho_hi = rho_hi
+
 
     def run(self):
         self.LoopOverPtBins()
@@ -306,10 +263,11 @@ class RhalphabetBuilder():
             icat += 1
 
     def prefit(self):
-
+        print "\n\n*** PREFIT ***"
         fbase = r.TFile.Open(self._output_path, 'update')
+        fbase.ls()
         fralphabase = r.TFile.Open(self._rhalphabet_output_path, 'update')
-
+        fralphabase.ls()
         categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
                       'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
 
@@ -346,11 +304,17 @@ class RhalphabetBuilder():
             pdfs_b.add(wralphabase[cat].pdf('qcd_%s' % cat))
             pdfs_s.add(wralphabase[cat].pdf('qcd_%s' % cat))
 
+            if not wbase[cat]:
+                print "ERROR : wbase[{}] doesn't exist! Printing file...".format(cat)
+                fbase.ls()
             data[cat] = wbase[cat].data('data_obs_%s' % cat)
             for proc in (self._background_names + self._signal_names):
                 if proc == 'qcd': continue
 
                 datahist['%s_%s' % (proc, cat)] = wbase[cat].data('%s_%s' % (proc, cat))
+                if not datahist['%s_%s' % (proc, cat)]:
+                    print "ERROR : Couldn't load data {}_{} from workspace {} in file {}".format(proc, cat, "w_"+cat, fbase.GetPath())
+                    sys.exit(1)
                 histpdf['%s_%s' % (proc, cat)] = r.RooHistPdf('histpdf_%s_%s' % (proc, cat),
                                                               'histpdf_%s_%s' % (proc, cat),
                                                               r.RooArgSet(wbase[cat].var('x')),
@@ -517,7 +481,7 @@ class RhalphabetBuilder():
             print "------- this bin pT value ", this_pt
 
             # Make the rhalphabet fit for this pt bin
-            (rhalphabet_hist_pass, rhalphabet_hist_fail) = self.MakeRhalphabet(["data_obs", "wqq", "zqq", "tqq", "hbb"],  fail_hists_ptbin, this_pt, "cat" + str(pt_bin))
+            (rhalphabet_hist_pass, rhalphabet_hist_fail) = self.MakeRhalphabet(["data_obs", "wqq", "zqq", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"],  fail_hists_ptbin, this_pt, "cat" + str(pt_bin))
 
             # Get signals
             (signal_rdhs_pass, signal_rdhs_fail) = self.GetSignalInputs(pass_hists_ptbin, fail_hists_ptbin, "cat" + str(pt_bin))
@@ -533,15 +497,23 @@ class RhalphabetBuilder():
                 pass_rdhs_syst[process] = {}
                 fail_rdhs_syst[process] = {}
                 for syst in self._systematics:
-                    tmph_pass_up = tools.proj('cat', str(iPt), self._pass_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
-                    tmph_pass_down = tools.proj('cat', str(iPt), self._pass_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
-                    tmph_fail_up = tools.proj('cat', str(iPt), self._fail_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
-                    tmph_fail_down = tools.proj('cat', str(iPt), self._fail_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    if not process in self._pass_hists_syst[syst + "Up"]:
+                        continue
+                    tmph_pass_up = tools.proj('cat', str(pt_bin), self._pass_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    tmph_pass_down = tools.proj('cat', str(pt_bin), self._pass_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    tmph_fail_up = tools.proj('cat', str(pt_bin), self._fail_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    tmph_fail_down = tools.proj('cat', str(pt_bin), self._fail_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
                     if syst == "mcstat":
-                        pass_hists_mcstat_uncorr = uncorrelate({"mcstat":self._pass_hists[process], "mcstatUp":tmph_pass_up, "mcstatDown":tmph_pass_down})
-                        del pass_hists_mcstat_uncorr["mcstat"]
-                        fail_hists_mcstat_uncorr = uncorrelate({"mcstat":self._fail_hists[process], "mcstatUp":tmph_fail_up, "mcstatDown":tmph_fail_down})
-                        del fail_hists_mcstat_uncorr["mcstat"]
+                        tmph_pass_central = tools.proj('cat', str(pt_bin), self._pass_hists[process], self._mass_nbins, self._mass_lo, self._mass_hi)
+                        pass_hists_mcstat_uncorr = {process:tmph_pass_central, process + "_mcstatUp":tmph_pass_up, process + "_mcstatDown":tmph_pass_down}
+                        uncorrelate(pass_hists_mcstat_uncorr, "mcstat")
+                        #print pass_hists_mcstat_uncorr
+                        del pass_hists_mcstat_uncorr[process]
+
+                        tmph_fail_central = tools.proj('cat', str(pt_bin), self._fail_hists[process], self._mass_nbins, self._mass_lo, self._mass_hi)
+                        fail_hists_mcstat_uncorr = {process:tmph_fail_central, process + "_mcstatUp":tmph_fail_up, process + "_mcstatDown":tmph_fail_down}
+                        uncorrelate(fail_hists_mcstat_uncorr, "mcstat")
+                        del fail_hists_mcstat_uncorr[process]
 
                         for key, pass_hist_mcstat in pass_hists_mcstat_uncorr.iteritems():
                             pass_rdhs_syst[process][key] = r.RooDataHist(pass_hist_mcstat.GetName(), pass_hist_mcstat.GetName(), r.RooArgList(self._lMSD), pass_hist_mcstat)
@@ -821,7 +793,7 @@ class RhalphabetBuilder():
 
     def GetWorkspaceInputs(self, pass_histograms, fail_histograms,iBin):
         # Protect against zero norm?
-        for background in ["wqq", "zqq", "tqq", "hbb"]:
+        for background in ["wqq", "zqq", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]:
             if pass_histograms[background].Integral() == 0:
                 print "[GetWorkspaceInputs] WARNING : Zero norm for histogram {}. Filling with (500, 1.e-10).".format(pass_histograms[background].GetName())
                 pass_histograms[background].Fill(500., 1.e-10)
@@ -837,7 +809,7 @@ class RhalphabetBuilder():
         data_rdh_comb  = r.RooDataHist("comb_data_obs","comb_data_obs",r.RooArgList(self._lMSD),r.RooFit.Index(roocategories),r.RooFit.Import("pass",data_rdh_pass),r.RooFit.Import("fail",data_rdh_fail)) 
 
         roofit_shapes = {}
-        for sample in ["wqq", "zqq", "qcd", "tqq", "hbb"]:
+        for sample in ["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]:
             roofit_shapes[sample] = self.GetRoofitHistObjects(pass_histograms[sample], fail_histograms[sample], sample,
                                                               iBin)
 
@@ -846,12 +818,10 @@ class RhalphabetBuilder():
         total_pdf_fail = r.RooAddPdf("tot_fail" + iBin, "tot_fail" + iBin,
                                      r.RooArgList(roofit_shapes["qcd"]["fail_epdf"]))
         ewk_pdf_pass = r.RooAddPdf("ewk_pass" + iBin, "ewk_pass" + iBin,
-                                   r.RooArgList(roofit_shapes["wqq"]["pass_epdf"], roofit_shapes["zqq"]["pass_epdf"],
-                                                roofit_shapes["tqq"]["pass_epdf"], roofit_shapes["hbb"]["pass_epdf"]))
+                                   r.RooArgList(roofit_shapes["wqq"]["pass_epdf"], roofit_shapes["zqq"]["pass_epdf"],roofit_shapes["tqq"]["pass_epdf"], roofit_shapes["hqq125"]["pass_epdf"], roofit_shapes["tthqq125"]["pass_epdf"], roofit_shapes["vbfhqq125"]["pass_epdf"], roofit_shapes["whqq125"]["pass_epdf"], roofit_shapes["zhqq125"]["pass_epdf"]))
         ewk_pdf_fail = r.RooAddPdf("ewk_fail" + iBin, "ewk_fail" + iBin,
                                    r.RooArgList(roofit_shapes["wqq"]["fail_epdf"], roofit_shapes["zqq"]["fail_epdf"],
-                                                roofit_shapes["tqq"]["fail_epdf"], roofit_shapes["hbb"]["fail_epdf"]))
-
+                                                roofit_shapes["tqq"]["fail_epdf"], roofit_shapes["hqq125"]["fail_epdf"], roofit_shapes["tthqq125"]["fail_epdf"], roofit_shapes["vbfhqq125"]["fail_epdf"], roofit_shapes["whqq125"]["fail_epdf"], roofit_shapes["zhqq125"]["fail_epdf"]))
         total_simulpdf = r.RooSimultaneous("tot", "tot", roocategories)
         total_simulpdf.addPdf(total_pdf_pass, "pass")
         total_simulpdf.addPdf(total_pdf_fail, "fail")
@@ -867,10 +837,12 @@ class RhalphabetBuilder():
             # {"qcd":total_pdf_pass, "ewk":ewk_pdf_pass},
             # {"qcd":total_pdf_fail, "ewk":ewk_pdf_fail},
             {"wqq": roofit_shapes["wqq"]["pass_rdh"], "zqq": roofit_shapes["zqq"]["pass_rdh"],
-             "tqq": roofit_shapes["tqq"]["pass_rdh"], "hbb":roofit_shapes["hbb"]["pass_rdh"]},
+             "tqq": roofit_shapes["tqq"]["pass_rdh"], "hqq125":roofit_shapes["hqq125"]["pass_rdh"], "tthqq125":roofit_shapes["tthqq125"]["pass_rdh"], "vbfhqq125":roofit_shapes["vbfhqq125"]["pass_rdh"], "whqq125":roofit_shapes["whqq125"]["pass_rdh"], "zhqq125":roofit_shapes["zhqq125"]["pass_rdh"]},
             {"wqq": roofit_shapes["wqq"]["fail_rdh"], "zqq": roofit_shapes["zqq"]["fail_rdh"],
-             "tqq": roofit_shapes["tqq"]["fail_rdh"], "hbb":roofit_shapes["hbb"]["fail_rdh"]},
+             "tqq": roofit_shapes["tqq"]["fail_rdh"], "hqq125":roofit_shapes["hqq125"]["fail_rdh"], "tthqq125":roofit_shapes["tthqq125"]["fail_rdh"], "vbfhqq125":roofit_shapes["vbfhqq125"]["fail_rdh"], "whqq125":roofit_shapes["whqq125"]["fail_rdh"], "zhqq125":roofit_shapes["zhqq125"]["fail_rdh"]},
         ]
+
+
 
     # Get (RooHistPdf, RooExtendPdf, RooDataHist) for a pair of pass/fail histograms
     # - The RooExtendPdfs are coupled via their normalizations, N*eff or N*(1-eff). 
@@ -952,151 +924,6 @@ class RhalphabetBuilder():
 #### E N D   O F   C L A S S
 ##############################################################################
 ##############################################################################
-
-##-------------------------------------------------------------------------------------
-def LoadHistograms(f, pseudo, blind, useQCD, scale, r_signal, mass_range, blind_range, rho_range, fLoose=None):
-    pass_hists = {}
-    fail_hists = {}
-    #f.ls()
-
-    # backgrounds
-    pass_hists_bkg = {}
-    fail_hists_bkg = {}
-    background_names = ["wqq", "zqq", "qcd", "tqq", "hbb"]
-    for i, bkg in enumerate(background_names):
-        if bkg == 'qcd':
-            qcd_fail = f.Get('qcd_fail')
-            qcd_fail.Scale(1. / scale)
-            qcd_fail.SetBinContent(13, 4, (
-                qcd_fail.GetBinContent(12, 4) + qcd_fail.GetBinContent(14, 4)) / 2.)  # REMOVE HIGH WEIGHT EVENT BIN
-            qcd_fail.SetBinError(13, 4, (
-                qcd_fail.GetBinError(12, 4) + qcd_fail.GetBinError(14, 4)) / 2.)  # REMOVE HIGH WEIGHT EVENT BIN
-            if useQCD:
-                qcd_pass = f.Get('qcd_pass').Clone()
-                qcd_pass.Scale(1. / scale)
-            else:
-                qcd_pass_real = f.Get('qcd_pass').Clone('qcd_pass_real')
-                qcd_pass_real.Scale(1. / scale)
-                qcd_pass = qcd_fail.Clone('qcd_pass')
-                qcd_pass_real_integral = 0
-                qcd_fail_integral = 0
-                for i in range(1, qcd_pass_real.GetNbinsX() + 1):
-                    for j in range(1, qcd_pass_real.GetNbinsY() + 1):
-                        if qcd_pass_real.GetXaxis().GetBinCenter(i) > mass_range[
-                            0] and qcd_pass_real.GetXaxis().GetBinCenter(
-                                i) < mass_range[1]:
-                            qcd_pass_real_integral += qcd_pass_real.GetBinContent(i, j)
-                            qcd_fail_integral += qcd_fail.GetBinContent(i, j)
-                if qcd_fail_integral > 0:
-                    qcd_pass.Scale(qcd_pass_real_integral / qcd_fail_integral)  # qcd_pass = qcd_fail * eff(pass)/eff(fail)
-                else:
-                    print "[LoadHistograms] ERROR : qcd_fail_integral = 0" 
-                    print "[LoadHistograms] ERROR : f = " + f.GetPath()
-                    sys.exit(1)
-            pass_hists_bkg["qcd"] = qcd_pass
-            fail_hists_bkg["qcd"] = qcd_fail
-            print 'qcd pass integral', qcd_pass.Integral()
-            print 'qcd fail integral', qcd_fail.Integral()
-        elif (fLoose is not None) and (bkg == 'wqq' or bkg == 'zqq'):
-            hpass_tmp = fLoose.Get(bkg + '_pass').Clone()
-            hfail_tmp = f.Get(bkg + '_fail').Clone()
-            hpass_tmp.Scale(1. / scale)
-            hfail_tmp.Scale(1. / scale)
-            hpass_tmp.Scale(GetSF(bkg, 'pass', f, fLoose))
-            hfail_tmp.Scale(GetSF(bkg, 'fail', f))
-            pass_hists_bkg[bkg] = hpass_tmp
-            fail_hists_bkg[bkg] = hfail_tmp
-        else:
-            print "Attempting to get {}".format(bkg + '_pass')
-            hpass_tmp = f.Get(bkg + '_pass').Clone()
-            hfail_tmp = f.Get(bkg + '_fail').Clone()
-            hpass_tmp.Scale(1. / scale)
-            hfail_tmp.Scale(1. / scale)
-            hpass_tmp.Scale(GetSF(bkg, 'pass', f))
-            hfail_tmp.Scale(GetSF(bkg, 'fail', f))
-            pass_hists_bkg[bkg] = hpass_tmp
-            fail_hists_bkg[bkg] = hfail_tmp
-
-    # signals
-    pass_hists_sig = {}
-    fail_hists_sig = {}
-    # for Pbb
-    # masses = [50, 75, 125, 100, 150, 250, 300]
-    # sigs = ['Pbb_']
-    # signal_names = []
-    # for Hbb
-
-    for signal_name in config.signal_names:
-        print "[debug] Getting " + signal_name + "_pass"
-        if not f.Get(signal_name + "_pass"):
-            print "[LoadHistograms] ERROR : Couldn't load histogram " + signal_name + "_pass" + " from file " + f.GetPath()
-            sys.exit(1)
-        passhist = f.Get(signal_name + "_pass").Clone()
-        failhist = f.Get(signal_name + "_fail").Clone()
-        for hist in [passhist, failhist]:
-            for i in range(0, hist.GetNbinsX() + 2):
-                for j in range(0, hist.GetNbinsY() + 2):
-                    if hist.GetBinContent(i, j) <= 0:
-                        hist.SetBinContent(i, j, 0)
-        failhist.Scale(1. / scale)
-        passhist.Scale(1. / scale)
-        failhist.Scale(GetSF(signal_name, 'fail', f))
-        passhist.Scale(GetSF(signal_name, 'pass', f))
-        pass_hists_sig[signal_name] = passhist
-        fail_hists_sig[signal_name] = failhist
-        #signal_names.append(signal_name)
-
-    if pseudo:
-        for i, bkg in enumerate(background_names):
-            print "Pseudo-making data: adding " + bkg
-            print "\t",
-            print pass_hists_bkg[bkg]
-            if i == 0:
-                pass_hists["data_obs"] = pass_hists_bkg[bkg].Clone('data_obs_pass')
-                fail_hists["data_obs"] = fail_hists_bkg[bkg].Clone('data_obs_fail')
-            else:
-                pass_hists["data_obs"].Add(pass_hists_bkg[bkg])
-                fail_hists["data_obs"].Add(fail_hists_bkg[bkg])
-
-        for i, signal_name in enumerate(config.signal_names):
-            pass_hists["data_obs"].Add(pass_hists_sig[signal_name], r_signal)
-            fail_hists["data_obs"].Add(fail_hists_sig[signal_name], r_signal)
-    else:
-        pass_hists["data_obs"] = f.Get('data_obs_pass')
-        fail_hists["data_obs"] = f.Get('data_obs_fail')
-
-    pass_hists.update(pass_hists_bkg)
-    pass_hists.update(pass_hists_sig)
-    fail_hists.update(fail_hists_bkg)
-    fail_hists.update(fail_hists_sig)
-
-    print pass_hists
-    print fail_hists
-    for histogram in (pass_hists.values() + fail_hists.values()):
-        for i in range(1,histogram.GetNbinsX()+1):
-            for j in range(1,histogram.GetNbinsY()+1):
-                massVal = histogram.GetXaxis().GetBinCenter(i)
-                ptVal = histogram.GetYaxis().GetBinLowEdge(j) + histogram.GetYaxis().GetBinWidth(j) * 0.3
-                rhoVal = r.TMath.Log(massVal * massVal / ptVal / ptVal)
-                if blind and histogram.GetXaxis().GetBinCenter(i) > blind_range[
-                    0] and histogram.GetXaxis().GetBinCenter(i) < blind_range[1]:
-                    print "blinding signal region for %s, mass bin [%i,%i] " % (
-                    histogram.GetName(), histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
-                    histogram.SetBinContent(i, j, 0.)
-                if rhoVal < rho_range[0] or rhoVal > rho_range[1]:
-                    print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
-                        rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
-                        histogram.GetYaxis().GetBinUpEdge(j),
-                        histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
-                    histogram.SetBinContent(i, j, 0.)
-        histogram.SetDirectory(0)
-
-        # print "lengths = ", len(pass_hists), len(fail_hists)
-    # print pass_hists;
-    # print fail_hists;
-    return (pass_hists, fail_hists)
-
-
 
 
 def reset(w, fr, exclude=None):
