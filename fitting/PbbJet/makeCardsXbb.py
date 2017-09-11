@@ -22,10 +22,10 @@ do_syst_mcstat=False
 def main(options,args):
 	for signal_name in config.limit_signal_names[options.jet_type]:
 		input_file = TFile.Open(config.get_histogram_file("SR", options.jet_type))
-		intp_file = TFile.Open(config.get_interpolation_file(options.jet_type))
+		intp_file = TFile.Open(config.get_interpolation_file("SR", options.jet_type))
 		boxes = ['pass', 'fail']
 		sigs = [signal_name]
-		bkgs = ['zqq','wqq','qcd','tqq','hbb']
+		bkgs = ['zqq','wqq','qcd','tqq',"hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
 		systs = ["JER", "JES", "PU"] #['JER','JES']
 
 		nBkgd = len(bkgs)
@@ -158,6 +158,7 @@ def main(options,args):
 						jesString += ' -'
 						jerString += ' -'
 						jerString += ' -'
+						puString += ' -'
 					else:
 						jesString += " {:.3f}".format(errs[process_name]["JES"])
 						jerString += " {:.3f}".format(errs[process_name]["JER"])
@@ -188,8 +189,11 @@ def main(options,args):
 
 			tag = "cat"+str(i)
 			os.system("mkdir -pv " + config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd))
+			print "Saving datacard to {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd) +"/card_rhalphabet_{}.txt".format(tag))
 			dctmp = open(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd) +"/card_rhalphabet_{}.txt".format(tag), 'w')
 			for l in linel:
+				if l[0] == "#":
+					newline = l
 				if 'JES' in l:
 					newline = jesString
 				elif 'JER' in l:
@@ -200,7 +204,7 @@ def main(options,args):
 					newline = bbString
 				elif 'veff' in l:
 					newline = vString
-				elif "scalept" in l and i>1:
+				elif "scale" in l and i>1:
 					newline = scaleptString
 				elif 'TQQEFF' in l:
 					if (histograms['tqq_pass'].Integral() + histograms['tqq_fail'].Integral()) > 0:
@@ -266,6 +270,9 @@ def main(options,args):
 				dctmp.write(mcStatGroupString + "\n")
 			dctmp.write(qcdGroupString + "\n")
 
+		# Combine category cards
+		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd)
+		os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 
 ###############################################################
 

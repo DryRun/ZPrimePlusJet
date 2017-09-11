@@ -43,8 +43,8 @@ class HistogramInterpolator:
       sys.exit(1)
 
     # Ensure left and right histograms have entries (RooIntegralMorph crashes otherwise)
-    if self._hists[left_val].Integral() == 0 or self._hists[right_val].Integral() == 0:
-      print "[HistogramInterpolator::make_interpolation] WARNING : Left and/or right histogram has integral zero (left={}, right={}). Setting output to zero.".format(self._hists[left_val].Integral(), self._hists[right_val].Integral())
+    if self._hists[left_val].GetEntries() < 10 or self._hists[right_val].GetEntries() < 10:
+      print "[HistogramInterpolator::make_interpolation] WARNING : Left and/or right histogram has low number of entries (left={}, right={}). Setting output to zero.".format(self._hists[left_val].GetEntries(), self._hists[right_val].GetEntries())
       int_hist = self._hists[left_val].Clone()
       int_hist.SetName("interpolated_hist_{}".format(int_val))
       int_hist.Reset()

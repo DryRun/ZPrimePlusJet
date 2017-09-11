@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import ROOT as r,sys,math,array
 
-class hist:
+class HistogramContainer:
     def __init__( self , iVars, iHists):
         self._vals  = iVars
         self._hists = iHists
@@ -73,6 +73,10 @@ class hist:
         return [lUp,lDown]
 
 def uncorrelate(hists, sysName, suppressLevel=None):
+    print "hists:", 
+    print hists
+    print "sysName:",
+    print sysName
     """Replaces each histogram whose name contains 'sysName' with many copies that represent uncorrelated bin-by-bin systematics.
     suppressLevel: if provided, new histograms will only be created for bins that differ from nominal by a fractional amount greater than suppressLevel."""
     #get all histograms that match the input string
@@ -86,6 +90,8 @@ def uncorrelate(hists, sysName, suppressLevel=None):
         systName = name.replace("Up","").replace("Down","")
         if systName not in systNames:
             systNames.append(systName)
+    print "systNames:",
+    print systNames
 
     for name in systNames:
         print("Uncorrelating "+name)

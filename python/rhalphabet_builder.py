@@ -499,31 +499,33 @@ class RhalphabetBuilder():
                 for syst in self._systematics:
                     if not process in self._pass_hists_syst[syst + "Up"]:
                         continue
-                    tmph_pass_up = tools.proj('cat', str(pt_bin), self._pass_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    tmph_pass_up   = tools.proj('cat', str(pt_bin), self._pass_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
                     tmph_pass_down = tools.proj('cat', str(pt_bin), self._pass_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
-                    tmph_fail_up = tools.proj('cat', str(pt_bin), self._fail_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
+                    tmph_fail_up   = tools.proj('cat', str(pt_bin), self._fail_hists_syst[syst + "Up"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
                     tmph_fail_down = tools.proj('cat', str(pt_bin), self._fail_hists_syst[syst + "Down"][process], self._mass_nbins, self._mass_lo,self._mass_hi)
                     if syst == "mcstat":
                         tmph_pass_central = tools.proj('cat', str(pt_bin), self._pass_hists[process], self._mass_nbins, self._mass_lo, self._mass_hi)
-                        pass_hists_mcstat_uncorr = {process:tmph_pass_central, process + "_mcstatUp":tmph_pass_up, process + "_mcstatDown":tmph_pass_down}
-                        uncorrelate(pass_hists_mcstat_uncorr, "mcstat")
+                        pass_name_base = "{}_pass_cat{}_{}cat{}".format(process, pt_bin, process, pt_bin)
+                        pass_hists_mcstat_uncorr = {"{}_pass_cat{}".format(process, pt_bin):tmph_pass_central, pass_name_base + "mcstatUp":tmph_pass_up, pass_name_base + "mcstatDown":tmph_pass_down}
+                        uncorrelate(pass_hists_mcstat_uncorr, "{}cat{}mcstat".format(process, pt_bin))
                         #print pass_hists_mcstat_uncorr
-                        del pass_hists_mcstat_uncorr[process]
+                        del pass_hists_mcstat_uncorr["{}_pass_cat{}".format(process, pt_bin)]
 
                         tmph_fail_central = tools.proj('cat', str(pt_bin), self._fail_hists[process], self._mass_nbins, self._mass_lo, self._mass_hi)
-                        fail_hists_mcstat_uncorr = {process:tmph_fail_central, process + "_mcstatUp":tmph_fail_up, process + "_mcstatDown":tmph_fail_down}
+                        fail_name_base = "{}_fail_cat{}_{}cat{}".format(process, pt_bin, process, pt_bin)
+                        fail_hists_mcstat_uncorr = {"{}_fail_cat{}".format(process, pt_bin):tmph_fail_central, fail_name_base + "mcstatUp":tmph_fail_up, fail_name_base + "mcstatDown":tmph_fail_down}
                         uncorrelate(fail_hists_mcstat_uncorr, "mcstat")
-                        del fail_hists_mcstat_uncorr[process]
+                        del fail_hists_mcstat_uncorr["{}_fail_cat{}".format(process, pt_bin)]
 
                         for key, pass_hist_mcstat in pass_hists_mcstat_uncorr.iteritems():
                             pass_rdhs_syst[process][key] = r.RooDataHist(pass_hist_mcstat.GetName(), pass_hist_mcstat.GetName(), r.RooArgList(self._lMSD), pass_hist_mcstat)
                         for key, fail_hist_mcstat in fail_hists_mcstat_uncorr.iteritems():
                             fail_rdhs_syst[process][key] = r.RooDataHist(fail_hist_mcstat.GetName(), fail_hist_mcstat.GetName(), r.RooArgList(self._lMSD), fail_hist_mcstat)
                     else:
-                        pass_rdhs_syst[process][syst + "Up"] = r.RooDataHist(tmph_pass_up.GetName(), tmph_pass_up.GetName(), r.RooArgList(self._lMSD), tmph_pass_up)
-                        pass_rdhs_syst[process][syst + "Down"] = r.RooDataHist(tmph_pass_down.GetName(), tmph_pass_down.GetName(), r.RooArgList(self._lMSD), tmph_pass_down)
-                        fail_rdhs_syst[process][syst + "Up"] = r.RooDataHist(tmph_fail_up.GetName(), tmph_fail_up.GetName(), r.RooArgList(self._lMSD), tmph_fail_up)
-                        fail_rdhs_syst[process][syst + "Down"] = r.RooDataHist(tmph_fail_down.GetName(), tmph_fail_down.GetName(), r.RooArgList(self._lMSD), tmph_fail_down)
+                        pass_rdhs_syst[process][syst + "Up"] = r.RooDataHist("{}_pass_cat{}_{}Up".format(process, pt_bin, syst), tmph_pass_up.GetName(), r.RooArgList(self._lMSD), tmph_pass_up)
+                        pass_rdhs_syst[process][syst + "Down"] = r.RooDataHist("{}_pass_cat{}_{}Down".format(process, pt_bin, syst), tmph_pass_down.GetName(), r.RooArgList(self._lMSD), tmph_pass_down)
+                        fail_rdhs_syst[process][syst + "Up"] = r.RooDataHist("{}_fail_cat{}_{}Up".format(process, pt_bin, syst), tmph_fail_up.GetName(), r.RooArgList(self._lMSD), tmph_fail_up)
+                        fail_rdhs_syst[process][syst + "Down"] = r.RooDataHist("{}_fail_cat{}_{}Down".format(process, pt_bin, syst), tmph_fail_down.GetName(), r.RooArgList(self._lMSD), tmph_fail_down)
 
             # #Write to file
             if not self._quiet:

@@ -3,6 +3,7 @@ import ROOT
 import sys
 import math
 import os
+import re
 from ROOT import *
 from multiprocessing import Process
 from optparse import OptionParser
@@ -20,11 +21,13 @@ gSystem.Load(os.getenv('CMSSW_BASE') + '/lib/' + os.getenv('SCRAM_ARCH') + '/lib
 sys.path.insert(0, os.path.expandvars("$CMSSW_BASE/src/DAZSLE/ZPrimePlusJet/fitting/"))
 sys.path.insert(0, '.')
 from tools import *
-from hist import *
+from histogram_container import HistogramContainer
 from DAZSLE.ZPrimePlusJet.rhalphabet_builder import RhalphabetBuilder
 
 gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJet.so"))
 import DAZSLE.ZPrimePlusJet.xbb_config as config
+
+re_sbb = re.compile("Sbb(?P<mass>\d+)")
 
 # Scale factors for MC
 # - Double b-tag SF from muon control region
@@ -33,7 +36,7 @@ def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1)
     SF = 1.
 
     # bb SF, for MC process with real bb
-    if 'hbb' in process or 'zqq' in process or 'Pbb' in process or 'Sbb' in process:
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
         if 'pass' in cat:
             SF *= config.analysis_parameters[jet_type]["BB_SF"]
             if 'zqq' in process:
@@ -47,7 +50,7 @@ def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1)
                     print (1. + (1. - config.analysis_parameters[jet_type]["BB_SF"]) * passInt / failInt)
 
     # V SF, for data-MC agreement for substructure cut
-    if 'wqq' in process or 'zqq' in process or 'hbb' in process or 'Pbb' in process or 'Sbb' in process:
+    if process in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
         SF *= config.analysis_parameters[jet_type]["V_SF"]
     return SF
 
@@ -67,7 +70,7 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     # backgrounds
     pass_hists_bkg = {}
     fail_hists_bkg = {}
-    background_names = ["wqq", "zqq", "qcd", "tqq", "hbb"]
+    background_names = ["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
     for i, bkg in enumerate(background_names):
         if bkg == 'qcd':
             qcd_fail = input_file.Get('qcd_fail')
@@ -170,36 +173,44 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             pass_hists_sig[signal_name] = passhist
             fail_hists_sig[signal_name] = failhist
 
+    pass_hists.update(pass_hists_bkg)
+    pass_hists.update(pass_hists_sig)
+    fail_hists.update(fail_hists_bkg)
+    fail_hists.update(fail_hists_sig)
+
     # Systematics
     all_systematics = []
     # - Histogram-based
     pass_hists_syst = {}
     fail_hists_syst = {}
-    for syst in ['JES', 'JER', 'trigger','Pu']:
+    for syst in ['JES', 'JER', 'Trigger','PU']:
         all_systematics.append(syst)
         for direction in ["Up", "Down"]:
             syst_dir = syst + direction
             pass_hists_syst[syst_dir] = {}
             fail_hists_syst[syst_dir] = {}
-            for process in ["tqq", "wqq", "zqq", "hbb"] + config.limit_signal_names[jet_type]:
+            for process in ["tqq", "wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] + config.limit_signal_names[jet_type]:
                 if process in config.interpolated_signal_names:
                     this_pass_hist = interpolation_file.Get(process + "_pass_" + syst_dir)
                     this_fail_hist = interpolation_file.Get(process + "_fail_" + syst_dir)
                 else:
                     this_pass_hist = input_file.Get(process + "_pass_" + syst_dir)
                     this_fail_hist = input_file.Get(process + "_fail_" + syst_dir)
+                    if not this_pass_hist:
+                        print "[LoadHistograms] ERROR : Histogram {} not found in file {}".format(process + "_pass_" + syst_dir, input_file.GetPath())
                 # Apply manual scale factor (reminder: this is for adjusting to using a fraction of the full dataset)
-                pass_hists_syst[syst_dir][process].Scale(1. / scale)
-                fail_hists_syst[syst_dir][process].Scale(1. / scale)
+                this_pass_hist.Scale(1. / scale)
+                this_fail_hist.Scale(1. / scale)
 
                 # Apply other SFs
                 if process in config.interpolated_signal_names:
-                    pass_hists_syst[syst_dir][process].Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file))
-                    fail_hists_syst[syst_dir][process].Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file))
+                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file))
+                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file))
                 else:
-                    pass_hists_syst[syst_dir][process].Scale(GetSF(signal_name, 'pass', jet_type, input_file))
-                    fail_hists_syst[syst_dir][process].Scale(GetSF(signal_name, 'fail', jet_type, input_file))
-
+                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, input_file))
+                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, input_file))
+                pass_hists_syst[syst_dir][process] = this_pass_hist
+                fail_hists_syst[syst_dir][process] = this_fail_hist
     # mcstat systematic
     # - This produces one histogram for up, and one histogram for down, with all bins varied coherently.
     # - RhalphabetBuilder is responsible for "uncorrelating" the bins, i.e. make a separate uncertainty for each bin.
@@ -207,13 +218,15 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     for direction in ["Up", "Down"]:
         pass_hists_syst["mcstat{}".format(direction)] = {}
         fail_hists_syst["mcstat{}".format(direction)] = {}
-        for process in ["tqq", "wqq", "zqq", "hbb"] + config.limit_signal_names[jet_type]:
+        for process in ["tqq", "wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] + config.limit_signal_names[jet_type]:
             if process in config.interpolated_signal_names:
-                this_pass_hist = interpolation_file.Get(process + "_pass")
-                this_fail_hist = interpolation_file.Get(process + "_fail")
+                this_pass_hist = interpolation_file.Get(process + "_pass").Clone()
+                this_fail_hist = interpolation_file.Get(process + "_fail").Clone()
             else:
-                this_pass_hist = input_file.Get(process + "_pass")
-                this_fail_hist = input_file.Get(process + "_fail")
+                this_pass_hist = input_file.Get(process + "_pass").Clone()
+                this_fail_hist = input_file.Get(process + "_fail").Clone()
+            this_pass_hist.SetName(process + "_pass_mcstat{}".format(direction))
+            this_fail_hist.SetName(process + "_fail_mcstat{}".format(direction))
             for xbin in xrange(0, this_pass_hist.GetNbinsX() + 2):
                 for ybin in xrange(0, this_pass_hist.GetNbinsY() + 2):
                     if direction == "Up":
@@ -228,7 +241,7 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     # Scale/shift systematics
     # - The central value scale/shift is also done here. 
     if do_shift:
-        all_systematics.append("ptscale")
+        all_systematics.append("scalept")
         all_systematics.append("smear")
         m_data = 82.657
         m_data_err = 0.313
@@ -244,21 +257,21 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
         res_shift_unc = math.sqrt((s_data_err / s_data) * (s_data_err / s_data) + (s_mc_err / s_mc) * (
             s_mc_err / s_mc)) * 2.  # (2 sigma shift)
 
-        pass_hists_syst["ptscaleUp"] = {}
-        pass_hists_syst["ptscaleDown"] = {}
+        pass_hists_syst["scaleptUp"] = {}
+        pass_hists_syst["scaleptDown"] = {}
         pass_hists_syst["smearUp"] = {}
         pass_hists_syst["smearDown"] = {}
-        fail_hists_syst["ptscaleUp"] = {}
-        fail_hists_syst["ptscaleDown"] = {}
+        fail_hists_syst["scaleptUp"] = {}
+        fail_hists_syst["scaleptDown"] = {}
         fail_hists_syst["smearUp"] = {}
         fail_hists_syst["smearDown"] = {}
 
-        for process in ["wqq", "zqq", "hbb"] + config.limit_signal_names[jet_type]:
+        for process in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] + config.limit_signal_names[jet_type]:
             if process == 'wqq':
                 mass = 80.385
             elif process == 'zqq':
                 mass = 91.1876
-            elif 'hbb' in process:
+            elif process in ["hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]:
                 mass = 125
             elif 'Sbb' in process:
                 re_match = re_sbb.search(process)
@@ -267,10 +280,10 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             # Start from the existing central value histograms
             # - Note: this code assumes that the histograms are already V-matched, and that we're ignoring the unmatched part
             this_pass_hist = pass_hists[process]
-            pass_hists_syst["ptscaleUp"][process] = this_pass_hist.Clone()
-            pass_hists_syst["ptscaleUp"][process].SetName(this_pass_hist.GetName() + "_ptscaleUp")
-            pass_hists_syst["ptscaleDown"][process] = this_pass_hist.Clone()
-            pass_hists_syst["ptscaleDown"][process].SetName(this_pass_hist.GetName() + "_ptscaleDown")
+            pass_hists_syst["scaleptUp"][process] = this_pass_hist.Clone()
+            pass_hists_syst["scaleptUp"][process].SetName(this_pass_hist.GetName() + "_scaleptUp")
+            pass_hists_syst["scaleptDown"][process] = this_pass_hist.Clone()
+            pass_hists_syst["scaleptDown"][process].SetName(this_pass_hist.GetName() + "_scaleptDown")
             pass_hists_syst["smearUp"][process] = this_pass_hist.Clone()
             pass_hists_syst["smearUp"][process].SetName(this_pass_hist.GetName() + "_smearUp")
             pass_hists_syst["smearDown"][process] = this_pass_hist.Clone()
@@ -278,9 +291,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
 
             for ptbin in xrange(1, this_pass_hist.GetNbinsY() + 1):
                 this_hist_ptbin = this_pass_hist.ProjectionX(this_pass_hist.GetName() + "_ptbin{}".format(ptbin), ptbin, ptbin)
-                hist_container = hist([mass], [this_hist_ptbin])
+                hist_container = HistogramContainer([mass], [this_hist_ptbin])
                 shift_val = mass - mass * mass_shift
-                tmp_shifted_h = hist_container.shift(tmph_mass_matched, shift_val)
+                tmp_shifted_h = hist_container.shift(this_hist_ptbin, shift_val)
                 # get new central value and new smeared value
                 smear_val = res_shift - 1
                 tmp_smeared_h = hist_container.smear(tmp_shifted_h[0], smear_val)
@@ -299,10 +312,10 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     pass_hists[process].SetBinContent(massbin, ptbin, hist_new_central.GetBinContent(massbin, ptbin))
                     pass_hists[process].SetBinError(massbin, ptbin, hist_new_central.GetBinError(massbin, ptbin))
 
-                    pass_hists_syst["ptscaleUp"][process].SetBinContent(massbin, ptbin, hist_syst_scale[0].GetBinContent(massbin, ptbin))
-                    pass_hists_syst["ptscaleUp"][process].SetBinError(massbin, ptbin, hist_syst_scale[0].GetBinError(massbin, ptbin))
-                    pass_hists_syst["ptscaleDown"][process].SetBinContent(massbin, ptbin, hist_syst_scale[1].GetBinContent(massbin, ptbin))
-                    pass_hists_syst["ptscaleDown"][process].SetBinError(massbin, ptbin, hist_syst_scale[1].GetBinError(massbin, ptbin))
+                    pass_hists_syst["scaleptUp"][process].SetBinContent(massbin, ptbin, hist_syst_shift[0].GetBinContent(massbin, ptbin))
+                    pass_hists_syst["scaleptUp"][process].SetBinError(massbin, ptbin, hist_syst_shift[0].GetBinError(massbin, ptbin))
+                    pass_hists_syst["scaleptDown"][process].SetBinContent(massbin, ptbin, hist_syst_shift[1].GetBinContent(massbin, ptbin))
+                    pass_hists_syst["scaleptDown"][process].SetBinError(massbin, ptbin, hist_syst_shift[1].GetBinError(massbin, ptbin))
 
                     pass_hists_syst["smearUp"][process].SetBinContent(massbin, ptbin, hist_syst_smear[0].GetBinContent(massbin, ptbin))
                     pass_hists_syst["smearUp"][process].SetBinError(massbin, ptbin, hist_syst_smear[0].GetBinError(massbin, ptbin))
@@ -312,10 +325,10 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             # End loop: ptbin
 
             this_fail_hist = fail_hists[process]
-            fail_hists_syst["ptscaleUp"][process] = this_fail_hist.Clone()
-            fail_hists_syst["ptscaleUp"][process].SetName(this_fail_hist.GetName() + "_ptscaleUp")
-            fail_hists_syst["ptscaleDown"][process] = this_fail_hist.Clone()
-            fail_hists_syst["ptscaleDown"][process].SetName(this_fail_hist.GetName() + "_ptscaleDown")
+            fail_hists_syst["scaleptUp"][process] = this_fail_hist.Clone()
+            fail_hists_syst["scaleptUp"][process].SetName(this_fail_hist.GetName() + "_scaleptUp")
+            fail_hists_syst["scaleptDown"][process] = this_fail_hist.Clone()
+            fail_hists_syst["scaleptDown"][process].SetName(this_fail_hist.GetName() + "_scaleptDown")
             fail_hists_syst["smearUp"][process] = this_fail_hist.Clone()
             fail_hists_syst["smearUp"][process].SetName(this_fail_hist.GetName() + "_smearUp")
             fail_hists_syst["smearDown"][process] = this_fail_hist.Clone()
@@ -323,9 +336,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
 
             for ptbin in xrange(1, this_fail_hist.GetNbinsY() + 1):
                 this_hist_ptbin = this_fail_hist.ProjectionX(this_fail_hist.GetName() + "_ptbin{}".format(ptbin), ptbin, ptbin)
-                hist_container = hist([mass], [this_hist_ptbin])
+                hist_container = HistogramContainer([mass], [this_hist_ptbin])
                 shift_val = mass - mass * mass_shift
-                tmp_shifted_h = hist_container.shift(tmph_mass_matched, shift_val)
+                tmp_shifted_h = hist_container.shift(this_hist_ptbin, shift_val)
                 # get new central value and new smeared value
                 smear_val = res_shift - 1
                 tmp_smeared_h = hist_container.smear(tmp_shifted_h[0], smear_val)
@@ -344,10 +357,10 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     fail_hists[process].SetBinContent(massbin, ptbin, hist_new_central.GetBinContent(massbin, ptbin))
                     fail_hists[process].SetBinError(massbin, ptbin, hist_new_central.GetBinError(massbin, ptbin))
 
-                    fail_hists_syst["ptscaleUp"][process].SetBinContent(massbin, ptbin, hist_syst_scale[0].GetBinContent(massbin, ptbin))
-                    fail_hists_syst["ptscaleUp"][process].SetBinError(massbin, ptbin, hist_syst_scale[0].GetBinError(massbin, ptbin))
-                    fail_hists_syst["ptscaleDown"][process].SetBinContent(massbin, ptbin, hist_syst_scale[1].GetBinContent(massbin, ptbin))
-                    fail_hists_syst["ptscaleDown"][process].SetBinError(massbin, ptbin, hist_syst_scale[1].GetBinError(massbin, ptbin))
+                    fail_hists_syst["scaleptUp"][process].SetBinContent(massbin, ptbin, hist_syst_shift[0].GetBinContent(massbin, ptbin))
+                    fail_hists_syst["scaleptUp"][process].SetBinError(massbin, ptbin, hist_syst_shift[0].GetBinError(massbin, ptbin))
+                    fail_hists_syst["scaleptDown"][process].SetBinContent(massbin, ptbin, hist_syst_shift[1].GetBinContent(massbin, ptbin))
+                    fail_hists_syst["scaleptDown"][process].SetBinError(massbin, ptbin, hist_syst_shift[1].GetBinError(massbin, ptbin))
 
                     fail_hists_syst["smearUp"][process].SetBinContent(massbin, ptbin, hist_syst_smear[0].GetBinContent(massbin, ptbin))
                     fail_hists_syst["smearUp"][process].SetBinError(massbin, ptbin, hist_syst_smear[0].GetBinError(massbin, ptbin))
@@ -379,11 +392,6 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
         pass_hists["data_obs"] = input_file.Get('data_obs_pass')
         fail_hists["data_obs"] = input_file.Get('data_obs_fail')
 
-    pass_hists.update(pass_hists_bkg)
-    pass_hists.update(pass_hists_sig)
-    fail_hists.update(fail_hists_bkg)
-    fail_hists.update(fail_hists_sig)
-
     print pass_hists
     print fail_hists
 
@@ -410,55 +418,56 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     histogram.SetBinContent(i, j, 0.)
         histogram.SetDirectory(0)
     for syst in all_systematics:
-        for process in pass_hists_syst[syst].keys():
-            for histogram in [pass_hists_syst[syst][process], fail_hists_syst[syst][process]]:
-                for i in range(1,histogram.GetNbinsX()+1):
-                    for j in range(1,histogram.GetNbinsY()+1):
-                        massVal = histogram.GetXaxis().GetBinCenter(i)
-                        ptVal = histogram.GetYaxis().GetBinLowEdge(j) + histogram.GetYaxis().GetBinWidth(j) * 0.3
-                        rhoVal = r.TMath.Log(massVal * massVal / ptVal / ptVal)
-                        if blind_range: 
-                            if histogram.GetXaxis().GetBinCenter(i) > blind_range[0] and histogram.GetXaxis().GetBinCenter(i) < blind_range[1]:
-                                print "blinding signal region for %s, mass bin [%i,%i] " % (
-                                histogram.GetName(), histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
+        for direction in ["Up", "Down"]:
+            syst_dir = "{}{}".format(syst, direction)
+            for process in pass_hists_syst[syst_dir].keys():
+                for histogram in [pass_hists_syst[syst_dir][process], fail_hists_syst[syst_dir][process]]:
+                    for i in range(1,histogram.GetNbinsX()+1):
+                        for j in range(1,histogram.GetNbinsY()+1):
+                            massVal = histogram.GetXaxis().GetBinCenter(i)
+                            ptVal = histogram.GetYaxis().GetBinLowEdge(j) + histogram.GetYaxis().GetBinWidth(j) * 0.3
+                            rhoVal = r.TMath.Log(massVal * massVal / ptVal / ptVal)
+                            if blind_range: 
+                                if histogram.GetXaxis().GetBinCenter(i) > blind_range[0] and histogram.GetXaxis().GetBinCenter(i) < blind_range[1]:
+                                    print "blinding signal region for %s, mass bin [%i,%i] " % (
+                                    histogram.GetName(), histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
+                                    histogram.SetBinContent(i, j, 0.)
+                            if rhoVal < rho_range[0] or rhoVal > rho_range[1]:
+                                #print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
+                                #    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
+                                #    histogram.GetYaxis().GetBinUpEdge(j),
+                                #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                                 histogram.SetBinContent(i, j, 0.)
-                        if rhoVal < rho_range[0] or rhoVal > rho_range[1]:
-                            #print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
-                            #    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
-                            #    histogram.GetYaxis().GetBinUpEdge(j),
-                            #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
-                            histogram.SetBinContent(i, j, 0.)
-                histogram.SetDirectory(0)
+                    histogram.SetDirectory(0)
 
 
         # print "lengths = ", len(pass_hists), len(fail_hists)
     # print pass_hists;
     # print fail_hists;
-    return (pass_hists, fail_hists, pass_hists_syst, fail_hists_syst)
+    return (pass_hists, fail_hists, pass_hists_syst, fail_hists_syst, all_systematics)
 
 
 def main(options, args):
     input_file = TFile(config.get_histogram_file("SR", options.jet_type), "READ")
-    interpolation_file = TFile(config.get_interpolation_file(options.jet_type), "READ")
-    odir = config.paths["LimitSetting"] + "/Xbb_inputs/"
+    interpolation_file = TFile(config.get_interpolation_file("SR", options.jet_type), "READ")
+    odir = config.paths["LimitSetting"] + "/Xbb_inputs/" + options.jet_type + "/"
 
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True)
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True)
 
-    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=options.NR, np=options.NP, mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type], interpolation_file=interpolation_file)
+    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=options.NR, np=options.NP, mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
     rhalphabuilder.run()
     if options.addHptShape:
         rhalphabuilder.addHptShape()    
     if options.prefit:
         rhalphabuilder.prefit()
-    elif options.loadfit is not None:
-        rhalphabuilder.loadfit(options.loadfit)
 
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
+        os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
         os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
         os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
 
@@ -486,6 +495,7 @@ if __name__ == '__main__':
     parser.add_option('--jet_type', dest='jet_type', help='AK8 or CA15')
     parser.add_option('--prefit', action='store_true', dest='prefit', default =False,help='do prefit', metavar='prefit')
     parser.add_option('-r', dest='r', default=0, type='float', help='signal strength for MC pseudodataset')
+    parser.add_option('--addHptShape',action='store_true',dest='addHptShape',default =False,help='add H pt shape unc', metavar='addHptShape')
     (options, args) = parser.parse_args()
 
     main(options, args)
