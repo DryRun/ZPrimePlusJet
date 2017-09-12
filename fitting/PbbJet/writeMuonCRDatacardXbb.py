@@ -237,7 +237,7 @@ def main(options, args):
 		output_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=True)
 		sigs = [signal_name]
 		systs = ['JER','JES','MuTrigger','MuID','MuIso','PU']
-
+		print config.interpolated_signal_names
 		if signal_name in config.interpolated_signal_names:
 			signal_file = TFile.Open(options.idir+'/interpolations_muCR_{}.root'.format(options.jet_type),'read')
 		else:

@@ -38,26 +38,30 @@ signal_model_masses = {
 	"ZPrime":[50, 75, 100, 125, 200, 300],
 }
 signal_masses = {} # E.g. "Sbb100":100
-for model in ["Sbb", "PSbb"]:
+for model in signal_models:
 	for mass in signal_model_masses[model]:
 		this_signal_name = "{}{}".format(model, mass)
 		signal_names.append(this_signal_name)
 		simulated_signal_names.append(this_signal_name)
 		signal_masses[this_signal_name] = mass
 
-interpolated_signal_masses = [x for x in range(50, 525, 25) if not x in signal_model_masses]
+interpolated_signal_masses = {}
 interpolated_signal_names = []
-for model in ["Sbb", "PSbb"]:
-	for mass in interpolated_signal_masses:
+for model in signal_models:
+	if model == "ZPrime":
+		interpolated_signal_masses[model] = [x for x in range(50, 325, 25) if not x in signal_model_masses[model]]
+	else:
+		interpolated_signal_masses[model] = [x for x in range(50, 525, 25) if not x in signal_model_masses[model]]
+	for mass in interpolated_signal_masses[model]:
 		this_signal_name = "{}{}".format(model, mass)
 		signal_names.append(this_signal_name)
 		interpolated_signal_names.append(this_signal_name)
 		signal_masses[this_signal_name] = mass
-for mass in range(50, 325, 25):
-	this_signal_name = "{}{}".format("ZPrime", mass)
-	signal_names.append(this_signal_name)
-	interpolated_signal_names.append(this_signal_name)
-	signal_masses[this_signal_name] = mass
+#for mass in range(50, 325, 25):
+#	this_signal_name = "{}{}".format("ZPrime", mass)
+#	signal_names.append(this_signal_name)
+#	interpolated_signal_names.append(this_signal_name)
+#	signal_masses[this_signal_name] = mass
 
 # Masses to be used in limit setting. AK8 can't go above 400 GeV because of no statistics.
 limit_signal_masses = {
