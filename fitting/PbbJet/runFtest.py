@@ -51,19 +51,37 @@ if __name__ == "__main__":
     if options.blind:
         blindString = '--blind'
     
-    exec_me('mkdir -p %s'%cardsDir1,options.dryRun)
-    exec_me('mkdir -p %s'%cardsDir2,options.dryRun)
-    exec_me('python buildRhalphabetHbb.py -i %s --scale %f -o %s --nr %i --np %i %s %s --use-qcd '%(options.ifile, options.scale, cardsDir1, options.NR1, options.NP1, blindString, pseudoString),options.dryRun )
-    exec_me('python buildRhalphabetHbb.py -i %s --scale %f -o %s --nr %i --np %i %s %s --use-qcd '%(options.ifile, options.scale, cardsDir2, options.NR2, options.NP2, blindString, pseudoString),options.dryRun )
-    exec_me('python makeCardsHbb.py -i %s -o %s'%(options.ifile,cardsDir1),options.dryRun)
-    exec_me('python makeCardsHbb.py -i %s -o %s'%(options.ifile,cardsDir2),options.dryRun)
-    exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt > card_rhalphabet_r%ip%i.txt'%(cardsDir1,cardsDir1,cardsDir1,cardsDir1,cardsDir1,cardsDir1,options.NR1, options.NP1),options.dryRun)
-    exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt > card_rhalphabet_r%ip%i.txt'%(cardsDir2,cardsDir2,cardsDir2,cardsDir2,cardsDir2,cardsDir2,options.NR2, options.NP2),options.dryRun)
-    p1 = int((options.NR1+1)*(options.NP1+1))
-    p2 = int((options.NR2+1)*(options.NP2+1))
+    fillString = ''
+    if options.box=='CA15':
+        fillString = '--fillCA15'
+    if not options.pseudo:
+        exec_me('python writeMuonCRDatacard.py -i ./ -o %s/ -c %s --mass %s %s'%(sigDir1, cut, options.mass, fillString),options.dryRun)
+        exec_me('python writeMuonCRDatacard.py -i ./ -o %s/ -c %s --mass %s %s'%(sigDir2, cut, options.mass, fillString),options.dryRun)
     
-    exec_me('mkdir -p ftest_r%ip%i_r%ip%i'%(options.NR1, options.NP1, options.NR2, options.NP2),options.dryRun)
-    exec_me('python limit.py -M FTest --datacard card_rhalphabet_r%ip%i.txt --datacard-alt card_rhalphabet_r%ip%i.txt -o ftest_r%ip%i_r%ip%i -n %i --p1 %i --p2 %i -t %i --lumi %f '%(options.NR1, options.NP1, options.NR2, options.NP2,options.NR1, options.NP1, options.NR2, options.NP2, options.n, p1, p2, options.toys,options.lumi ),options.dryRun)
+    
+    if not options.pseudo:
+        exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt %s/datacard_muonCR.txt > %s/card_rhalphabet_muonCR_r%ip%i.txt'%(sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,options.NR1, options.NP1),options.dryRun)
+        exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt %s/datacard_muonCR.txt > %s/card_rhalphabet_muonCR_r%ip%i.txt'%(sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,options.NR2, options.NP2),options.dryRun)
+        #exec_me("text2workspace.py -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel -m 125  --PO verbose --PO 'map=.*/*hqq125:r[1,0,20]' --PO 'map=.*/zqq:r_z[1,0,20]' %s/card_rhalphabet_muonCR_r%ip%i.txt -o %s/card_rhalphabet_muonCR_floatZ_r%ip%i.root"%(sigDir1, options.NR1, options.NP1, sigDir1, options.NR1, options.NP1))
+        #exec_me("text2workspace.py -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel -m 125  --PO verbose --PO 'map=.*/*hqq125:r[1,0,20]' --PO 'map=.*/zqq:r_z[1,0,20]' %s/card_rhalphabet_muonCR_r%ip%i.txt -o %s/card_rhalphabet_muonCR_floatZ_r%ip%i.root"%(sigDir2, options.NR2, options.NP2, sigDir2, options.NR2, options.NP2))
+    else:
+        exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt > %s/card_rhalphabet_r%ip%i.txt'%(sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,sigDir1,options.NR1, options.NP1),options.dryRun)
+        exec_me('combineCards.py cat1=%s/card_rhalphabet_cat1.txt cat2=%s/card_rhalphabet_cat2.txt cat3=%s/card_rhalphabet_cat3.txt cat4=%s/card_rhalphabet_cat4.txt cat5=%s/card_rhalphabet_cat5.txt cat6=%s/card_rhalphabet_cat6.txt > %s/card_rhalphabet_r%ip%i.txt'%(sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,sigDir2,options.NR2, options.NP2),options.dryRun)
+        #exec_me("text2workspace.py -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel -m 125  --PO verbose --PO 'map=.*/*hqq125:r[1,0,20]' --PO 'map=.*/zqq:r_z[1,0,20]' %s/card_rhalphabet_r%ip%i.txt -o %s/card_rhalphabet_r%ip%i.txt"%(sigDir1, options.NR1, options.NP1, sigDir1, options.NR1, options.NP1))
+        #exec_me("text2workspace.py -P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel -m 125  --PO verbose --PO 'map=.*/*hqq125:r[1,0,20]' --PO 'map=.*/zqq:r_z[1,0,20]' %s/card_rhalphabet_r%ip%i.txt -o %s/card_rhalphabet_r%ip%i.txt"%(sigDir2, options.NR2, options.NP2, sigDir2, options.NR2, options.NP2))
+
+    p1 = int((options.NR1+1)*(options.NP1+1)) # free paramaters
+    p2 = int((options.NR2+1)*(options.NP2+1)) # free parameters
+    
+
+    dataString = ''
+    if not options.pseudo:
+        dataString = '--data'
+
+    if options.pseudo:
+        exec_me('python limit.py -M FTest --datacard %s/card_rhalphabet_r%ip%i.txt --datacard-alt %s/card_rhalphabet_r%ip%i.txt -o %s -n %i --p1 %i --p2 %i -t %i --lumi %f %s -r %f --freezeNuisances tqqeffSF,tqqnormSF'%(sigDir1, options.NR1, options.NP1, sigDir2, options.NR2, options.NP2, ftestDir, options.n, p1, p2, options.toys, options.lumi, dataString, options.r),options.dryRun)
+    else:
+        exec_me('python limit.py -M FTest --datacard %s/card_rhalphabet_muonCR_r%ip%i.txt --datacard-alt %s/card_rhalphabet_muonCR_r%ip%i.txt -o %s -n %i --p1 %i --p2 %i -t %i --lumi %f %s -r %f'%(sigDir1, options.NR1, options.NP1, sigDir2, options.NR2, options.NP2, ftestDir_muonCR, options.n, p1, p2, options.toys, options.lumi, dataString, options.r),options.dryRun)
      
 
      

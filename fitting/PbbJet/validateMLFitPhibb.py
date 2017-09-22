@@ -97,24 +97,66 @@ def main(options, args):
         rfr = r.RooFitResult(fml.Get(options.fit))
         lParams = []
         lParams.append("qcdeff")
-        # for r2p2 polynomial
-        # lParams.append("r0p1") # -> r1p0
-        # lParams.append("r0p2") # -> r2p0
-        # lParams.append("r1p0") # -> r1p0
-        # lParams.append("r1p1") # -> r1p1
-        # lParams.append("r1p2")
-        # lParams.append("r2p0")
-        # lParams.append("r2p1")
-        # lParams.append("r2p2")
-        # for r2p1 polynomial
-        lParams.append("r2p0")  # -> r1p0
-        lParams.append("r1p1")  # -> r2p0
-        lParams.append("r1p0")  # -> r0p1
-        lParams.append("r0p1")  # -> r1p1
-        lParams.append("r2p1")  # -> r2p1
-        lParams.append("r0p2")
-        lParams.append("r1p2")
-        lParams.append("r2p2")
+        if options.NR == 2 and options.NP == 2:
+            # for r2p2 polynomial
+            lParams.append("r0p1") # -> r1p0
+            lParams.append("r0p2") # -> r2p0
+            lParams.append("r1p0") # -> r1p0
+            lParams.append("r1p1") # -> r1p1
+            lParams.append("r1p2")
+            lParams.append("r2p0")
+            lParams.append("r2p1")
+            lParams.append("r2p2")            
+        elif options.NR == 2 and options.NP == 1:
+            # for r2p1 polynomial            
+            lParams.append("r2p0")  # -> r1p0
+            lParams.append("r1p1")  # -> r2p0
+            lParams.append("r1p0")  # -> r0p1
+            lParams.append("r0p1")  # -> r1p1
+            lParams.append("r2p1")  # -> r2p1
+            lParams.append("r0p2")  # zero
+            lParams.append("r1p2")  # zero
+            lParams.append("r2p2")  # zero
+        elif options.NR == 3 and options.NP == 1:
+            # for r3p1 polynomial            
+            lParams.append("r2p0")  # -> r1p0
+            lParams.append("r1p1")  # -> r2p0
+            lParams.append("r1p0")  # -> r0p1
+            lParams.append("r0p1")  # -> r1p1
+            lParams.append("r2p1")  # -> r2p1
+            lParams.append("r0p2")
+            lParams.append("r1p2")
+            lParams.append("r2p2")
+        elif options.NR == 3 and options.NP == 2:
+            # for r3p2 polynomial            
+            lParams.append("r2p0")  # -> r1p0
+            lParams.append("r1p1")  # -> r2p0
+            lParams.append("r1p0")  # -> r0p1
+            lParams.append("r0p1")  # -> r1p1
+            lParams.append("r2p1")  # -> r2p1
+            lParams.append("r0p2")
+            lParams.append("r1p2")
+            lParams.append("r2p2")
+        elif options.NR == 3 and options.NP == 3:
+            # for r3p2 polynomial            
+            lParams.append("r2p0")  # -> r1p0
+            lParams.append("r1p1")  # -> r2p0
+            lParams.append("r1p0")  # -> r0p1
+            lParams.append("r0p1")  # -> r1p1
+            lParams.append("r2p1")  # -> r2p1
+            lParams.append("r0p2")
+            lParams.append("r1p2")
+            lParams.append("r2p2")            
+        elif options.NR == 4 and options.NP == 1:
+            # for r4p1 polynomial            
+            lParams.append("r2p0")  # -> r1p0
+            lParams.append("r1p1")  # -> r2p0
+            lParams.append("r1p0")  # -> r0p1
+            lParams.append("r0p1")  # -> r1p1
+            lParams.append("r2p1")  # -> r2p1
+            lParams.append("r0p2")
+            lParams.append("r1p2")
+            lParams.append("r2p2")
 
         pars = []
         for p in lParams:
@@ -546,6 +588,28 @@ def fun2(x, par):
     poly2 = par[0] * (par[6] + par[7] * rho + par[8] * rho * rho) * x[1] * x[1]
     return poly0 + poly1 + poly2
 
+def fun3(x, par):
+    rho = r.TMath.Log((x[0] * x[0]) / (x[1] * x[1]))
+    poly0 = par[0] * (1.0 + par[1] * rho + par[2] * rho * rho + par[3] * rho * rho * rho)
+    poly1 = par[0] * (par[4] + par[5] * rho + par[6] * rho * rho + par[7] * rho * rho * rho) * x[1]
+    poly2 = par[0] * (par[8] + par[9] * rho + par[10] * rho * rho + par[11] * rho * rho * rho) * x[1] * x[1]
+    poly3 = par[0] * (par[12] + par[13] * rho + par[14] * rho * rho + par[15] * rho * rho * rho) * x[1] * x[1] * x[1]
+    return poly0 + poly1 + poly2 + poly3
+
+def fun2rho(x, par):
+    rho = x[0]
+    poly0 = par[0]*(1.0 + par[1]*rho + par[2]*rho*rho)
+    poly1 = par[0]*(par[3] + par[4]*rho + par[5]*rho*rho)*x[1]
+    poly2 = par[0]*(par[6] + par[7]*rho + par[8]*rho*rho)*x[1]*x[1]
+    return poly0+poly1+poly2
+
+def fun3rho(x, par):
+    rho = x[0]
+    poly0 = par[0] * (1.0 + par[1] * rho + par[2] * rho * rho + par[3] * rho * rho * rho)
+    poly1 = par[0] * (par[4] + par[5] * rho + par[6] * rho * rho + par[7] * rho * rho * rho) * x[1]
+    poly2 = par[0] * (par[8] + par[9] * rho + par[10] * rho * rho + par[11] * rho * rho * rho) * x[1] * x[1]
+    poly3 = par[0] * (par[12] + par[13] * rho + par[14] * rho * rho + par[15] * rho * rho * rho) * x[1] * x[1] * x[1]
+    return poly0 + poly1 + poly2 + poly3
 
 def makeTF(pars, ratio):
     ratio.GetXaxis().SetTitle('m_{SD}^{PUPPI} (GeV)')
@@ -561,7 +625,16 @@ def makeTF(pars, ratio):
     f2params = array.array('d', pars)
     npar = len(f2params)
 
-    f2 = r.TF2("f2", fun2, ratio.GetXaxis().GetXmin() + 3.5, ratio.GetXaxis().GetXmax() - 3.5,
+    if npar < 10:
+        fun = fun2
+        funrho = fun2rho
+    else:
+        fun = fun3
+        funrho = fun3rho
+        
+    #f2 = r.TF2("f2", fun2, ratio.GetXaxis().GetXmin() + 3.5, ratio.GetXaxis().GetXmax() - 3.5,
+    #           ratio.GetYaxis().GetXmin() + 25., ratio.GetYaxis().GetXmax() - 100., npar)
+    f2 = r.TF2("f2", fun, MIN_M['allcats'] + 3.5, MAX_M['allcats'] - 3.5,
                ratio.GetYaxis().GetXmin() + 25., ratio.GetYaxis().GetXmax() - 100., npar)
     f2.SetParameters(f2params)
 
@@ -618,7 +691,239 @@ def makeTF(pars, ratio):
     #    r.gPad.Modified()
     #    r.gPad.Update()
     #    c.SaveAs(options.odir+"/mlfit/tf_%03d.png"%i)
+    
+    c.SetLogz(0)
+    Npoints = 10
+    f2graph = r.TGraph2D()
+    N = -1
+    for i in range(Npoints+1):
+        for j in range(Npoints+1):            
+            N+=1
+            #x = ratio.GetXaxis().GetXmin() + i*(ratio.GetXaxis().GetXmax()-ratio.GetXaxis().GetXmin())/Npoints
+            x = MIN_M['allcats'] + i*(MAX_M['allcats']-MIN_M['allcats'])/Npoints
+            y = ratio.GetYaxis().GetXmin() + j*(ratio.GetYaxis().GetXmax()-ratio.GetYaxis().GetXmin())/Npoints
+            z = f2.Eval(x,y)
+            print x, y, z
+            #if math.log(x*x/(y*y)) < -6 or math.log(x*x/(y*y)) > -2.1:
+            #    z = 0
+            #print x, y, z
+            f2graph.SetPoint(N,x,y,z)
 
+    rhoxy =  r.TF2("rhoxy","log(x*x/y/y)",30,600,400,1100)
+    contours = array.array('d',[options.lrho ,options. hrho])
+    rhoxy.SetContour(2,contours)
+    rhoxy.Draw("CONT Z LIST")
+    r.gPad.Update()
+    conts = r.gROOT.GetListOfSpecials().FindObject("contours")
+    contour0 = conts.At(0)
+    rhocurv1 = contour0.First().Clone()
+    rhocurv1.SetLineWidth(-503)
+    rhocurv1.SetFillStyle(3004)
+    rhocurv1.SetFillColor(r.kBlack)
+    rhocurv1.SetLineColor(r.kBlack)
+    contour0 = conts.At(1)
+    rhocurv2 = contour0.First().Clone()
+    rhocurv2.SetLineWidth(503)
+    rhocurv2.SetFillStyle(3004)
+    rhocurv2.SetFillColor(r.kBlack)
+    rhocurv2.SetLineColor(r.kBlack)
+    
+    mxy = r.TF2("mxy", "sqrt(exp(x))*y",-6.5, -0.5, 400, 1100)
+    contours = array.array('d',[MIN_M['allcats'] ,MAX_M['allcats']])
+    mxy.SetContour(2,contours)
+    mxy.Draw("CONT Z LIST")
+    r.gPad.Update()
+    conts = r.gROOT.GetListOfSpecials().FindObject("contours")
+    contour0 = conts.At(0)
+    mcurv1 = contour0.First().Clone()    
+    mcurv1.SetLineWidth(503)
+    mcurv1.SetFillStyle(3004)
+    mcurv1.SetFillColor(r.kBlack)
+    mcurv1.SetLineColor(r.kBlack)
+    contour0 = conts.At(1)
+    mcurv2 = contour0.First().Clone()    
+    mcurv2.SetLineWidth(-503)
+    mcurv2.SetFillStyle(3004)
+    mcurv2.SetFillColor(r.kBlack)
+    mcurv2.SetLineColor(r.kBlack)
+    
+    r.gStyle.SetNumberContours(999)
+            
+    ratiorho = r.TH2D('ratiorho','ratiorho',Npoints,options.lrho,options.hrho,Npoints,ratio.GetYaxis().GetXmin(),ratio.GetYaxis().GetXmax())
+    ratiorho.GetYaxis().SetTitle(ratio.GetYaxis().GetTitle())    
+    ratiorho.GetXaxis().SetTitle('#rho')
+    ratiorho.GetZaxis().SetTitle(ratio.GetZaxis().GetTitle())
+    ratiorhograph = r.TGraph2D()
+    N = -1
+    for i in range(1,ratio.GetNbinsX()+1):
+        for j in range(1,ratio.GetNbinsY()+1):
+            m = ratio.GetXaxis().GetBinCenter(i)
+            N+=1
+            y = ratio.GetYaxis().GetBinCenter(j)
+            x = math.log(m*m/(y*y))
+            z = ratio.GetBinContent(i,j)
+            #print N, x, y, z
+            ratiorhograph.SetPoint(N,x,y,z)
+            
+    f2rho = r.TF2("f2",funrho,options.lrho,options.hrho,ratio.GetYaxis().GetXmin(),ratio.GetYaxis().GetXmax(),npar)
+    f2rho.SetParameters(f2params)
+    f2rhograph = r.TGraph2D()
+    N = -1
+    for i in range(Npoints+1):
+        for j in range(Npoints+1):
+            N+=1
+            x = options.lrho + i*(options.hrho-options.lrho)/Npoints
+            y = ratio.GetYaxis().GetXmin() + j*(ratio.GetYaxis().GetXmax()-ratio.GetYaxis().GetXmin())/Npoints
+            z = f2rho.Eval(x,y)
+            m = math.sqrt(math.exp(x))*y
+            #if m < 40 or m > 201:
+            #    z = 0
+            #print x, y, z
+            f2rhograph.SetPoint(N,x,y,z)
+    #ratiorho.Draw('surf1')    
+    ratiorhograph.GetHistogram().GetYaxis().SetTitle(ratio.GetYaxis().GetTitle())    
+    ratiorhograph.GetHistogram().GetXaxis().SetTitle('#rho')
+    ratiorhograph.GetHistogram().GetZaxis().SetTitle(ratio.GetZaxis().GetTitle())
+    ratiorhograph.GetHistogram().GetYaxis().SetNdivisions(505)
+    ratiorhograph.GetHistogram().GetXaxis().SetNdivisions(505)
+    ratiorhograph.GetHistogram().GetXaxis().SetTitleOffset(1.5)
+    ratiorhograph.GetHistogram().GetYaxis().SetTitleOffset(1.5)
+    ratiorhograph.Draw("surf1")
+    f2rho.Draw("surf fb bb same")
+    #f2rhograph.SetLineColor(r.kRed)
+    #f2rhograph.Draw("surf fb bb same")
+    tag1 = r.TLatex(0.67,0.92,"%.1f fb^{-1} (13 TeV)"%options.lumi)
+    tag1.SetNDC(); tag1.SetTextFont(42)
+    tag1.SetTextSize(0.045)
+    tag2 = r.TLatex(0.15,0.92,"CMS")
+    tag2.SetNDC()
+    tag2.SetTextFont(62)
+    tag3 = r.TLatex(0.25,0.92,"Preliminary")
+    tag3.SetNDC()
+    tag3.SetTextFont(52)
+    tag2.SetTextSize(0.055)
+    tag3.SetTextSize(0.045)
+    tag1.Draw()
+    tag2.Draw()
+    tag3.Draw()
+    
+    c.SaveAs(options.odir + "/mlfit/tf_rho.pdf")
+    c.SaveAs(options.odir + "/mlfit/tf_rho.C")
+    
+    # to plot TF2
+    #f2.Draw("colz")
+    c.SetRightMargin(0.20)
+    # to plot TGraph:
+    f2graph.Draw("colz")
+    f2graph.GetXaxis().SetRangeUser(MIN_M['allcats'],MAX_M['allcats'])
+    rhocurv1.Draw('same')
+    rhocurv2.Draw('same')
+    
+    f2graph.GetHistogram().GetXaxis().SetTitle(ratio.GetXaxis().GetTitle())
+    f2graph.GetHistogram().GetYaxis().SetTitle(ratio.GetYaxis().GetTitle())
+    f2graph.GetHistogram().GetZaxis().SetTitle(ratio.GetZaxis().GetTitle())
+    f2graph.GetHistogram().GetZaxis().SetTitleOffset(1.3)
+    tag1 = r.TLatex(0.67,0.92,"%.1f fb^{-1} (13 TeV)"%options.lumi)
+    tag1.SetNDC(); tag1.SetTextFont(42)
+    tag1.SetTextSize(0.045)
+    tag2 = r.TLatex(0.15,0.92,"CMS")
+    tag2.SetNDC()
+    tag2.SetTextFont(62)
+    tag3 = r.TLatex(0.25,0.92,"Preliminary")
+    tag3.SetNDC()
+    tag3.SetTextFont(52)
+    tag2.SetTextSize(0.055)
+    tag3.SetTextSize(0.045)
+    tag1.Draw()
+    tag2.Draw()
+    tag3.Draw()
+    
+    pave_param = r.TPaveText(0.17,0.72,0.27,0.82,"NDC")
+    pave_param.SetTextFont(42)
+    pave_param.SetFillColor(0)
+    pave_param.SetBorderSize(0)
+    pave_param.SetFillStyle(0)
+    pave_param.SetTextAlign(11)
+    pave_param.SetTextSize(0.045)
+    text = pave_param.AddText("#rho = #minus%.1f"%(-1.*options.lrho))
+    text.SetTextAngle(75)
+    text.SetTextAlign(22)
+    text.SetTextSize(0.045)
+    pave_param.Draw()
+    
+    pave_param2 = r.TPaveText(0.62,0.18,0.72,0.28,"NDC")
+    pave_param2.SetTextFont(42)
+    pave_param2.SetFillColor(0)
+    pave_param2.SetBorderSize(0)
+    pave_param2.SetFillStyle(0)
+    pave_param2.SetTextAlign(11)
+    pave_param2.SetTextSize(0.045)
+    text2 = pave_param2.AddText("#rho = #minus%.1f"%(-1.*options.hrho))
+    text2.SetTextAngle(40)
+    text2.SetTextAlign(22)
+    text2.SetTextSize(0.045)
+    pave_param2.Draw()
+    
+
+    
+    c.SaveAs(options.odir + "/mlfit/tf_msdcolz.pdf")
+    c.SaveAs(options.odir + "/mlfit/tf_msdcolz.C")
+
+    # to plot TF2
+    #f2rho.Draw("colz")
+    # to plot TGraph:
+    #f2rhograph.SetContours(999)
+    f2rhograph.Draw("colz")
+    mcurv1.Draw('same')
+    mcurv2.Draw('same')
+    f2rhograph.GetHistogram().GetXaxis().SetTitle('#rho')
+    f2rhograph.GetHistogram().GetYaxis().SetTitle(ratio.GetYaxis().GetTitle())
+    f2rhograph.GetHistogram().GetZaxis().SetTitle(ratio.GetZaxis().GetTitle())
+    f2rhograph.GetHistogram().GetZaxis().SetTitleOffset(1.3)
+    Tag1 = r.TLatex(0.67,0.92,"%.1f fb^{-1} (13 TeV)"%options.lumi)
+    tag1.SetNDC(); tag1.SetTextFont(42)
+    tag1.SetTextSize(0.045)
+    tag2 = r.TLatex(0.15,0.92,"CMS")
+    tag2.SetNDC()
+    tag2.SetTextFont(62)
+    tag3 = r.TLatex(0.25,0.92,"Preliminary")
+    tag3.SetNDC()
+    tag3.SetTextFont(52)
+    tag2.SetTextSize(0.055)
+    tag3.SetTextSize(0.045)
+    tag1.Draw()
+    tag2.Draw()
+    tag3.Draw()
+
+    
+    pave_param = r.TPaveText(0.18,0.5,0.28,0.6,"NDC")
+    pave_param.SetTextFont(42)
+    pave_param.SetFillColor(0)
+    pave_param.SetBorderSize(0)
+    pave_param.SetFillStyle(0)
+    pave_param.SetTextAlign(11)
+    pave_param.SetTextSize(0.045)
+    text = pave_param.AddText("m_{SD} = %i GeV"%MIN_M['allcats'])
+    text.SetTextAngle(-70)
+    text.SetTextAlign(22)
+    text.SetTextSize(0.045)
+    pave_param.Draw()
+    
+    pave_param2 = r.TPaveText(0.57,0.65,0.67,0.75,"NDC")
+    pave_param2.SetTextFont(42)
+    pave_param2.SetFillColor(0)
+    pave_param2.SetBorderSize(0)
+    pave_param2.SetFillStyle(0)
+    pave_param2.SetTextAlign(11)
+    pave_param2.SetTextSize(0.045)
+    text2 = pave_param2.AddText("m_{SD} = %i GeV"%MAX_M['allcats'])
+    text2.SetTextAngle(-72)
+    text2.SetTextAlign(22)
+    text2.SetTextSize(0.045)
+    pave_param2.Draw()
+    
+    c.SaveAs(options.odir + "/mlfit/tf_rhocolz.pdf")
+    c.SaveAs(options.odir + "/mlfit/tf_rhocolz.C")
 
 ##-------------------------------------------------------------------------------------
 if __name__ == '__main__':
@@ -638,6 +943,8 @@ if __name__ == '__main__':
                       metavar='ratio')
     parser.add_option('--lrho', dest='lrho', default=-6.0, type= 'float', help='low value rho cut')
     parser.add_option('--hrho', dest='hrho', default=-2.1, type='float', help=' high value rho cut')
+    parser.add_option('--nr', dest='NR', default=2, type='int', help='order of rho (or mass) polynomial')
+    parser.add_option('--np', dest='NP', default=1, type='int', help='order of pt polynomial')
 
     (options, args) = parser.parse_args()
 
