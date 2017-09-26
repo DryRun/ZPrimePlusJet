@@ -47,7 +47,7 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 				hbb125ptErrs[process_name] = 1.3
 			else:
 				hbb125ptErrs[process_name] = 1.0
-			if proc in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Sbb" in proc:
+			if proc in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or ("Sbb" in proc) or ("ZPrime" in proc):
 				veffErrs[process_name] = 1.0+config.analysis_parameters[options.jet_type]["V_SF_ERR"]/config.analysis_parameters[options.jet_type]["V_SF"]
 				if box=='pass':
 					bbeffErrs[process_name] = 1.0+config.analysis_parameters[options.jet_type]["BB_SF_ERR"]/config.analysis_parameters[options.jet_type]["BB_SF"]
