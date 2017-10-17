@@ -39,6 +39,7 @@ def makePlots(hb,style,odir,lumi,ofile,canvases,rho_lo,rho_hi,nr,np):
     c1, f2params = makeCanvasRatio2D(hb['QCD']['fail'],hb['QCD']['pass'],['QCD fail, p_{T} > 500 GeV','QCD pass, p_{T}>500 GeV'],[ROOT.kBlue,ROOT.kBlack],style,'ratio_msd_v_pt_ak8_topR6_N2',odir,lumi,ofile=ofile, rho_lo=rho_lo, rho_hi=rho_hi,nr=nr,np=np)
     canvases.append(c1)
     for i in range(1,len(ptBinBoundaries)):
+        print "[debug] len(f2params) = " + str(f2params) + ", nr=" + str(nr) + ", np=" + str(np)
         c = makeCanvasRatio(hist_fail_cat[i-1],hist_pass_cat[i-1],['QCD fail, %i < p_{T} < %i GeV'%(ptBinBoundaries[i-1],ptBinBoundaries[i]),'QCD pass, %i < p_{T} < %i GeV'%(ptBinBoundaries[i-1],ptBinBoundaries[i])],[ROOT.kBlue,ROOT.kBlack],style,'ratio_msd_ak8_topR6_N2_cat%i'%i,odir,lumi,ofile,(ptBinBoundaries[i-1]+ptBinBoundaries[i])/2.,f2params, MIN_M['cat%i'%i], MAX_M['cat%i'%i],nr,np)
         canvases.append(c)
     
