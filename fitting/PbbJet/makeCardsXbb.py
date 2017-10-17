@@ -188,9 +188,9 @@ def main(options,args):
 									mcStatStrings['%s_%s'%(proc1,box1),i,j] += '\t-'
 
 			tag = "cat"+str(i)
-			os.system("mkdir -pv " + config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd))
-			print "Saving datacard to {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd) +"/card_rhalphabet_{}.txt".format(tag))
-			dctmp = open(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd) +"/card_rhalphabet_{}.txt".format(tag), 'w')
+			os.system("mkdir -pv " + config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata))
+			print "Saving datacard to {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata) +"/card_rhalphabet_{}.txt".format(tag))
+			dctmp = open(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata) +"/card_rhalphabet_{}.txt".format(tag), 'w')
 			for l in linel:
 				if l[0] == "#":
 					newline = l
@@ -271,7 +271,8 @@ def main(options,args):
 			dctmp.write(qcdGroupString + "\n")
 
 		# Combine category cards
-		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd)
+		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata)
+		print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'
 		os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 
 ###############################################################
@@ -288,6 +289,7 @@ if __name__ == '__main__':
 	parser.add_option('--blind', action='store_true', dest='blind', default =False,help='blind signal region', metavar='blind')
 	parser.add_option('--no-mcstat-shape', action='store_true', dest='noMcStatShape', default =False,help='change mcstat uncertainties to lnN', metavar='noMcStatShape')
 	parser.add_option('--qcd', action="store_true", help='Make cards for QCD pseudodata')
+	parser.add_option('--decidata', action="store_true", help='Make cards for data PS 10s')
 	parser.add_option('--jet_type', type=str, help='AK8 or CA15')
 
 	(options, args) = parser.parse_args()

@@ -86,8 +86,10 @@ def get_histogram_file(selection, jet_type):
 def get_interpolation_file(selection, jet_type):
 	return paths["LimitSetting"] + "/Xbb_inputs/interpolations_{}_{}.root".format(selection, jet_type)
 
-def get_datacard_directory(signal_name, jet_type, qcd=False):
+def get_datacard_directory(signal_name, jet_type, qcd=False, decidata=False):
 	if qcd:
 		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_qcd_mcstat/{}".format(jet_type, signal_name)
+	elif decidata:
+		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_ps10_mcstat/{}".format(jet_type, signal_name)
 	else:
 		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_mcstat/{}".format(jet_type, signal_name)

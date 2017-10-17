@@ -62,7 +62,7 @@ def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1)
 # pseudo          = Substitute pseudodata constructed from MC for real data
 # useQCD = For QCD pass, use MC prediction instead of fail * (pass int / fail int)
 # fLoose = 
-def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True):
+def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, decidata=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True):
     pass_hists = {}
     fail_hists = {}
     #f.ls()
@@ -129,6 +129,11 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             pass_hists_bkg[bkg] = hpass_tmp
             fail_hists_bkg[bkg] = hfail_tmp
 
+        # If decidata, scale MC histograms by 0.1
+        if decidata:
+            pass_hists_bkg[bkg].Scale(0.1)
+            fail_hists_bkg[bkg].Scale(0.1)
+
     # signals
     pass_hists_sig = {}
     fail_hists_sig = {}
@@ -173,6 +178,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             pass_hists_sig[signal_name] = passhist
             fail_hists_sig[signal_name] = failhist
 
+        if decidata:
+            pass_hists_sig[signal_name].Scale(0.1)
+            fail_hists_sig[signal_name].Scale(0.1)
     pass_hists.update(pass_hists_bkg)
     pass_hists.update(pass_hists_sig)
     fail_hists.update(fail_hists_bkg)
@@ -211,6 +219,11 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, input_file))
                 pass_hists_syst[syst_dir][process] = this_pass_hist
                 fail_hists_syst[syst_dir][process] = this_fail_hist
+
+                if decidata:
+                    pass_hists_syst[syst_dir][process].Scale(0.1)
+                    fail_hists_syst[syst_dir][process].Scale(0.1)
+
     # mcstat systematic
     # - This produces one histogram for up, and one histogram for down, with all bins varied coherently.
     # - RhalphabetBuilder is responsible for "uncorrelating" the bins, i.e. make a separate uncertainty for each bin.
@@ -237,6 +250,10 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     this_fail_hist.SetBinContent(xbin, ybin, this_fail_hist.GetBinContent(xbin, ybin) + (alpha * this_fail_hist.GetBinError(xbin, ybin)))
             pass_hists_syst["mcstat{}".format(direction)][process] = this_pass_hist
             fail_hists_syst["mcstat{}".format(direction)][process] = this_fail_hist
+
+            if decidata:
+                pass_hists_syst["mcstat{}".format(direction)][process].Scale(0.1)
+                fail_hists_syst["mcstat{}".format(direction)][process].Scale(0.1)
 
     # Scale/shift systematics
     # - The central value scale/shift is also done here. 
@@ -372,7 +389,7 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     # End if do_shift
 
     # Load data
-    # - Either real data, or pseudodata=sum of background MC
+    # - Either real data, or pseudodata=sum of background MC, or data PS 10
     if pseudo:
         for i, bkg in enumerate(background_names):
             print "Pseudo-making data: adding " + bkg
@@ -388,6 +405,11 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
         for i, signal_name in enumerate(config.limit_signal_names[jet_type]):
             pass_hists["data_obs"].Add(pass_hists_sig[signal_name], r_signal)
             fail_hists["data_obs"].Add(fail_hists_sig[signal_name], r_signal)
+    elif decidata:
+        pass_hists["data_obs"] = input_file.Get('data_obs_ps10_pass')
+        pass_hists["data_obs"].SetName("data_obs_pass")
+        fail_hists["data_obs"] = input_file.Get('data_obs_ps10_fail')
+        fail_hists["data_obs"].SetName("data_obs_fail")
     else:
         pass_hists["data_obs"] = input_file.Get('data_obs_pass')
         fail_hists["data_obs"] = input_file.Get('data_obs_fail')
@@ -455,7 +477,7 @@ def main(options, args):
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True)
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata)
 
     rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=options.NR, np=options.NP, mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
@@ -467,9 +489,10 @@ def main(options, args):
 
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
-        os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
-        os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
-        os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo)))
+        os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
+        print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata))
+        os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
+        os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
 
     input_file.Close()
     interpolation_file.Close()
@@ -480,6 +503,7 @@ if __name__ == '__main__':
     #parser.add_option('-i', '--ifile', dest='ifile', default='hist_1DZbb.root', help='file with histogram inputs', metavar='ifile')
     #parser.add_option('-o', '--odir', dest='odir', default='./', help='directory to write plots', metavar='odir')
     parser.add_option('--pseudo', action='store_true', dest='pseudo', default=False, help='use MC', metavar='pseudo')
+    parser.add_option('--decidata', action='store_true', dest='decidata', default=False, help='Use 1/10 data', metavar='decidata')
     parser.add_option('--blind', action='store_true', dest='blind', default=False, help='blind signal region',
                       metavar='blind')
     parser.add_option('--useQCD', action='store_true', dest='useQCD', default=False, help='use real QCD MC',
@@ -499,4 +523,5 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     main(options, args)
+    print "Done."
 ##-------------------------------------------------------------------------------------

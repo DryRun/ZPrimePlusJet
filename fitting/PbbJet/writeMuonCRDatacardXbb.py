@@ -13,10 +13,10 @@ import DAZSLE.ZPrimePlusJet.xbb_config as config
 from buildRhalphabetXbb import GetSF
 
 # fake_signal: instead of loading the signal template, insert a fake template, gaussian with tiny normalization. Using this until we can come up with a good template.
-def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_path):
+def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_path,decidata=False):
 	obsRate = {}
 	for box in boxes:
-		obsRate[box] = histograms['data_obs_%s'%box].Integral()
+		obsRate[box] = histograms['data_singlemu_%s'%box].Integral()
 	nBkgd = len(bkgs)
 	nSig = len(sigs)
 
@@ -233,8 +233,11 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 def main(options, args):
 	boxes = ['pass', 'fail']
 	bkgs = ['zqq','wqq','qcd','tqq','vvqq','stqq','wlnu','zll', "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
+	datas = ["data_singlemu"]
+
 	for signal_name in config.limit_signal_names[options.jet_type]:
-		output_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=True)
+		print "On signal {}".format(signal_name)
+		output_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata)
 		sigs = [signal_name]
 		systs = ['JER','JES','MuTrigger','MuID','MuIso','PU']
 		print config.interpolated_signal_names
@@ -246,26 +249,30 @@ def main(options, args):
 		if not input_file.IsOpen():
 			print "ERROR : Couldn't open file at " + options.idir+'/histograms_muCR_{}.root'.format(options.jet_type)
 			sys.exit(1)
-		input_file.ls()
+		#input_file.ls()
 		histograms = {}
 		data_histograms = {}
 		
-		for proc in (bkgs+sigs+['data_obs']):
+		for proc in (bkgs+sigs+datas):
 			for box in boxes:
 				process_name = "{}_{}".format(proc, box)
-				print 'getting histogram for process: {}'.format(process_name)
+				print 'getting histogram for process: {}'.format(process_name),
 
 				if proc in sigs:
 					this_file = signal_file
 				else:
 					this_file = input_file
+				print ' from file {}'.format(this_file.GetPath())
 				if not this_file.Get(process_name):
 					print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name, this_file.GetPath())
 					sys.exit(1)
 				histograms[process_name] = this_file.Get(process_name)
 				histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file))
+				# Rename data histogram to data_obs_<pass|fail>. The muCR histograms come in named as data_singlemu_...
+				if "data" in process_name:
+					histograms[process_name].SetName("data_obs_" + box)
 				for syst in systs:
-					if proc!='data_obs':
+					if not "data" in proc:
 						for direction in ["Up", "Down"]:
 							process_name_syst = "{}_{}{}".format(process_name, syst, direction)
 							print 'getting histogram for process: {}'.format(process_name_syst)
@@ -276,14 +283,25 @@ def main(options, args):
 							histograms[process_name_syst].Scale(GetSF(proc,box,options.jet_type,this_file))
 
 		if options.fake_signal:
+			print "Faking signal histograms"
 			for proc in sigs:
 				for box in boxes:
 					process_name = "{}_{}".format(proc, box)
+					print "Faking signal for {}".format(process_name)
 					sig_mass = config.signal_masses[proc]
 					sig_width = sig_mass / 10.
 					histograms[process_name].Reset()
-					gaussian = TF1("mygaus","TMath::Gaus(x,{},{})".format(sig_mass, sig_width), 0., 1000.);
+					gaussian = TF1("mygaus","TMath::Gaus(x,{},{})".format(sig_mass, sig_width), 0., 1000.)
 					histograms[process_name].FillRandom("mygaus", 1000)
+					print histograms[process_name]
+					print histograms[process_name].GetName()
+
+					#hist_msd_slice = histograms[process_name].ProjectionX()
+					#hist_msd_slice.FillRandom("mygaus", 1000)
+					#for xbin in xrange(1, histograms[process_name].GetNbinsX() + 1):
+					#	for ybin in xrange(1, histograms[process_name].GetNbinsY() + 1):
+					#		histograms[process_name].SetBinContent(xbin, ybin, hist_msd_slice.GetBinContent(xbin))
+					#		histograms[process_name].SetBinError(xbin, ybin, hist_msd_slice.GetBinError(xbin))
 					histograms[process_name].Scale(0.01 / histograms[process_name].Integral())
 					
 					for syst in systs:
@@ -291,6 +309,12 @@ def main(options, args):
 							process_name_syst = "{}_{}{}".format(process_name, syst, direction)
 							histograms[process_name_syst].Reset()
 							histograms[process_name_syst].FillRandom("mygaus", 1000)
+							#hist_msd_slice = histograms[process_name_syst].ProjectionX()
+							#hist_msd_slice.FillRandom("mygaus", 1000)
+							#for xbin in xrange(1, histograms[process_name_syst].GetNbinsX() + 1):
+							#	for ybin in xrange(1, histograms[process_name_syst].GetNbinsY() + 1):
+							#		histograms[process_name_syst].SetBinContent(xbin, ybin, hist_msd_slice.GetBinContent(xbin))
+							#		histograms[process_name_syst].SetBinError(xbin, ybin, hist_msd_slice.GetBinError(xbin))
 							histograms[process_name_syst].Scale(0.01 / histograms[process_name_syst].Integral())
 
 
@@ -315,8 +339,8 @@ def main(options, args):
 		outputFile.Close()
 
 		writeDataCard(boxes,workspace_path,[signal_name],bkgs,histograms,options,datacard_path)
-		print '\ndatacard:\n'
-		os.system('cat {}'.format(datacard_path))
+		#print '\ndatacard:\n'
+		#os.system('cat {}'.format(datacard_path))
 
 
 
@@ -325,6 +349,8 @@ if __name__ == '__main__':
 	parser.add_option('-i','--idir', dest='idir', default='/uscms/home/dryu/DAZSLE/data/LimitSetting/Xbb_inputs/',help='directory with data', metavar='idir')
 	parser.add_option('-j', '--jet_type', dest='jet_type', default="AK8", help="AK8 or CA15")
 	parser.add_option('--fake_signal', action='store_true', help="Use fake signal template (gaussian with tiny normalization)")
+	parser.add_option('--decidata', action='store_true', help="For data, use eventNumber % 10 == 0")
+	parser.add_option('--qcd', action='store_true', help="Cards for QCD MC")
 	(options, args) = parser.parse_args()
 
 	main(options, args)
