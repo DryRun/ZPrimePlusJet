@@ -24,11 +24,11 @@ def main(options,args):
     cut = options.cuts.split(',')[0]
 
     exec_me('python makeCardsPhibb.py -i %s  -o %s/%s/%s --remove-unmatched --no-mcstat-shape  -c %s --lrho %f --hrho %f'%(options.ifile,
-                                                                                                                           options.odir,
-                                                                                                                           jet_type,
-                                                                                                                           cut, cut,
-                                                                                                                           options.lrho,
-                                                                                                                           options.hrho),options.dryRun)
+       options.odir,
+       jet_type,
+       cut, cut,
+       options.lrho,
+       options.hrho),options.dryRun)
     exec_me('python buildRhalphabetPhibb.py -i %s -o %s/%s/%s/ --remove-unmatched  --prefit --use-qcd --pseudo -c %s --lrho %f --hrho %f'%(options.ifile,
                                                                                                                                             options.odir,
                                                                                                                                             jet_type,
