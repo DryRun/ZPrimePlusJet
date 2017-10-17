@@ -83,9 +83,9 @@ def main(options,args,outputExists):
                 ptVal = histogram.GetYaxis().GetBinLowEdge(j) + histogram.GetYaxis().GetBinWidth(j) * 0.3
                 rhoVal = ROOT.TMath.Log(massVal * massVal / ptVal / ptVal)
                 if rhoVal < options.lrho or rhoVal > options.hrho:
-                    print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
-                    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j), histogram.GetYaxis().GetBinUpEdge(j),
-                    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
+                    #print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
+                    #rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j), histogram.GetYaxis().GetBinUpEdge(j),
+                    #histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                     histogram.SetBinContent(i, j, 0.)
             
         
