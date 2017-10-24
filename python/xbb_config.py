@@ -13,19 +13,27 @@ analysis_parameters["AK8"] = {
 	"BB_SF_ERR":0.03,
 	"V_SF":0.993,
 	"V_SF_ERR":0.043,
+	"MAX_NRHO":3,
+	"MAX_NPT":2,
+	"DEFAULT_NRHO":2,
+	"DEFAULT_NPT":1,
 }
 analysis_parameters["CA15"] = {
 	"MASS_BINS":80,
 	"MSD":[40, 600],
 	"RHO":[-4.7, -1.0],
 	"PT":[450., 1000.],
-	"DCSV":0.85,
+	"DCSV":0.75,
 	"N2DDT":0.,
 	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
 	"BB_SF":0.91,
 	"BB_SF_ERR":0.03,
 	"V_SF":0.993,
 	"V_SF_ERR":0.043,
+	"MAX_NRHO":6,
+	"MAX_NPT":2,
+	"DEFAULT_NRHO":5,
+	"DEFAULT_NPT":1,
 }
 
 # Signal sample bookkeeping
@@ -77,7 +85,8 @@ for jet_type in ["AK8", "CA15"]:
 # File locations
 paths = {
 	"data":os.path.expandvars("$HOME/DAZSLE/data/"),
-	"LimitSetting":os.path.expandvars("$HOME/DAZSLE/data/LimitSetting")
+	"LimitSetting":os.path.expandvars("$HOME/DAZSLE/data/LimitSetting/"),
+	"Fits":os.path.expandvars("$HOME/DAZSLE/data/Fits/"),
 }
 
 def get_histogram_file(selection, jet_type):
@@ -86,10 +95,18 @@ def get_histogram_file(selection, jet_type):
 def get_interpolation_file(selection, jet_type):
 	return paths["LimitSetting"] + "/Xbb_inputs/interpolations_{}_{}.root".format(selection, jet_type)
 
-def get_datacard_directory(signal_name, jet_type, qcd=False, decidata=False):
+def get_datacard_directory(signal_name, jet_type, qcd=False, decidata=False, region="SR"):
 	if qcd:
-		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_qcd_mcstat/{}".format(jet_type, signal_name)
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_qcd_mcstat/{}".format(region, jet_type, signal_name)
 	elif decidata:
-		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_ps10_mcstat/{}".format(jet_type, signal_name)
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_ps10_mcstat/{}".format(region, jet_type, signal_name)
 	else:
-		return paths["LimitSetting"] + "/Xbb_inputs/SR_{}/cards_mcstat/{}".format(jet_type, signal_name)
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_mcstat/{}".format(region, jet_type, signal_name)
+
+def get_ftest_directory(signal_name, jet_type, qcd=False, decidata=False, region="SR", nrho=2, npt=1):
+	category = "{}_{}".format(region, jet_type)
+	if qcd:
+		category += "_pseudodata"
+	elif decidata:
+		category += "_ps10"
+	return paths["Fits"] + "/ftest/{}/r{}p{}/{}".format(category, nrho, npt, signal_name)

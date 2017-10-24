@@ -407,6 +407,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             fail_hists["data_obs"].Add(fail_hists_sig[signal_name], r_signal)
     elif decidata:
         pass_hists["data_obs"] = input_file.Get('data_obs_ps10_pass')
+        if not pass_hists["data_obs"]:
+            print "[LoadHistograms] ERROR : Couldn't find histogram data_obs_ps10_pass in file {}".format(input_file.GetPath())
         pass_hists["data_obs"].SetName("data_obs_pass")
         fail_hists["data_obs"] = input_file.Get('data_obs_ps10_fail')
         fail_hists["data_obs"].SetName("data_obs_fail")
@@ -470,16 +472,16 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
 
 
 def main(options, args):
-    input_file = TFile(config.get_histogram_file("SR", options.jet_type), "READ")
-    interpolation_file = TFile(config.get_interpolation_file("SR", options.jet_type), "READ")
-    odir = config.paths["LimitSetting"] + "/Xbb_inputs/" + options.jet_type + "/"
+    input_file = TFile(config.get_histogram_file(options.region, options.jet_type), "READ")
+    interpolation_file = TFile(config.get_interpolation_file(options.region, options.jet_type), "READ")
+    odir =  "{}/Xbb_inputs/{}_{}/".format(config.paths["LimitSetting"], options.region, options.jet_type)
 
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
     (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata)
 
-    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=options.NR, np=options.NP, mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
+    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
     rhalphabuilder.run()
     if options.addHptShape:
@@ -489,10 +491,10 @@ def main(options, args):
 
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
-        os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
-        print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata))
-        os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
-        os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata)))
+        os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
+        os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
 
     input_file.Close()
     interpolation_file.Close()
@@ -514,12 +516,13 @@ if __name__ == '__main__':
                       metavar='freeze')
     parser.add_option('--scale', dest='scale', default=1, type='float',
                       help='scale factor to scale MC (assuming only using a fraction of the data)')
-    parser.add_option('--nr', dest='NR', default=2, type='int', help='order of rho (or mass) polynomial')
-    parser.add_option('--np', dest='NP', default=1, type='int', help='order of pt polynomial')
+    #parser.add_option('--nr', dest='NR', type='int', help='order of rho (or mass) polynomial')
+    #parser.add_option('--np', dest='NP', type='int', help='order of pt polynomial')
     parser.add_option('--jet_type', dest='jet_type', help='AK8 or CA15')
     parser.add_option('--prefit', action='store_true', dest='prefit', default =False,help='do prefit', metavar='prefit')
     parser.add_option('-r', dest='r', default=0, type='float', help='signal strength for MC pseudodataset')
     parser.add_option('--addHptShape',action='store_true',dest='addHptShape',default =False,help='add H pt shape unc', metavar='addHptShape')
+    parser.add_option('--region', type=str, default="SR", help="SR or N2CR", dest="region")
     (options, args) = parser.parse_args()
 
     main(options, args)

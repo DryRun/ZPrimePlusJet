@@ -16,7 +16,7 @@ from buildRhalphabetXbb import GetSF
 def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_path,decidata=False):
 	obsRate = {}
 	for box in boxes:
-		obsRate[box] = histograms['data_singlemu_%s'%box].Integral()
+		obsRate[box] = histograms['data_obs_%s'%box].Integral()
 	nBkgd = len(bkgs)
 	nSig = len(sigs)
 
@@ -119,9 +119,9 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 	hbb125ptString = 'hqq125pt\tlnN'
 	veffString = 'veff\tlnN'
 	bbeffString = 'bbeff\tlnN'
-	znormEWString = 'znormEWmuonCR\tlnN'
+	znormEWString = 'znormEW\tlnN'
 	znormQString = 'znormQ\tlnN'    
-	wznormEWString = 'wznormEWmuonCR\tlnN'
+	wznormEWString = 'wznormEW\tlnN'
 	muidString = 'MuID\tshape'   
 	muisoString = 'MuIso\tshape'   
 	mutriggerString = 'MuTrigger\tshape'  
@@ -233,7 +233,7 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 def main(options, args):
 	boxes = ['pass', 'fail']
 	bkgs = ['zqq','wqq','qcd','tqq','vvqq','stqq','wlnu','zll', "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
-	datas = ["data_singlemu"]
+	datas = ["data_obs"]
 
 	for signal_name in config.limit_signal_names[options.jet_type]:
 		print "On signal {}".format(signal_name)
@@ -263,11 +263,18 @@ def main(options, args):
 				else:
 					this_file = input_file
 				print ' from file {}'.format(this_file.GetPath())
-				if not this_file.Get(process_name):
+
+				# Data: need to load the singlemu data, not jetht
+				histogram_name = process_name
+				if "data_obs" in process_name:
+					histogram_name.replace("data_obs", "data_singlemu")
+
+				if not this_file.Get(histogram_name):
 					print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name, this_file.GetPath())
 					sys.exit(1)
-				histograms[process_name] = this_file.Get(process_name)
-				histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file))
+				histograms[process_name] = this_file.Get(histogram_name).ProjectionX()
+				if not "data" in process_name:
+					histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file))
 				# Rename data histogram to data_obs_<pass|fail>. The muCR histograms come in named as data_singlemu_...
 				if "data" in process_name:
 					histograms[process_name].SetName("data_obs_" + box)
@@ -333,6 +340,7 @@ def main(options, args):
 		for key, histo in histograms.iteritems():
 			#histo.Rebin(23)
 			#ds = RooDataHist(key,key,RooArgList(w.var('y')),histo)
+			print "\n[debug] Workspace saving {}".format(key)	
 			ds = RooDataHist(key,key,RooArgList(w.var('x')),histo)
 			getattr(w,'import')(ds, RooCmdArg())
 		w.Write()

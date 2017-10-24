@@ -17,12 +17,13 @@ from DAZSLE.ZPrimePlusJet.xbb_config import analysis_parameters as params
 gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJet.so"))
 import DAZSLE.ZPrimePlusJet.xbb_config as config
 
-do_syst_mcstat=False
+do_syst_mcstat=True
 ##-------------------------------------------------------------------------------------
 def main(options,args):
 	for signal_name in config.limit_signal_names[options.jet_type]:
-		input_file = TFile.Open(config.get_histogram_file("SR", options.jet_type))
-		intp_file = TFile.Open(config.get_interpolation_file("SR", options.jet_type))
+		print "Opening input file {}".format(config.get_histogram_file(options.region, options.jet_type))
+		input_file = TFile.Open(config.get_histogram_file(options.region, options.jet_type))
+		intp_file = TFile.Open(config.get_interpolation_file(options.region, options.jet_type))
 		boxes = ['pass', 'fail']
 		sigs = [signal_name]
 		bkgs = ['zqq','wqq','qcd','tqq',"hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
@@ -188,9 +189,9 @@ def main(options,args):
 									mcStatStrings['%s_%s'%(proc1,box1),i,j] += '\t-'
 
 			tag = "cat"+str(i)
-			os.system("mkdir -pv " + config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata))
-			print "Saving datacard to {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata) +"/card_rhalphabet_{}.txt".format(tag))
-			dctmp = open(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata) +"/card_rhalphabet_{}.txt".format(tag), 'w')
+			os.system("mkdir -pv " + config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region))
+			print "Saving datacard to {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region) +"/card_rhalphabet_{}.txt".format(tag, region=options.region))
+			dctmp = open(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region) +"/card_rhalphabet_{}.txt".format(tag), 'w, region=options.region')
 			for l in linel:
 				if l[0] == "#":
 					newline = l
@@ -269,11 +270,25 @@ def main(options,args):
 			if do_syst_mcstat:
 				dctmp.write(mcStatGroupString + "\n")
 			dctmp.write(qcdGroupString + "\n")
+			for irho in xrange(config.analysis_parameters[options.jet_type]["MAX_NRHO"]+1):
+				for ipt in xrange(config.analysis_parameters[options.jet_type]["MAX_NPT"]+1):
+					if irho == 0 and ipt == 0:
+						continue
+					dctmp.write("r{}p{}\tflatParam\n".format(irho, ipt))
+			dctmp.close()
 
 		# Combine category cards
-		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata)
-		print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'
-		os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region)
+		if options.region == "N2CR":
+			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+		else:	
+			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+
+			# No muCR
+			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 
 ###############################################################
 
@@ -291,6 +306,7 @@ if __name__ == '__main__':
 	parser.add_option('--qcd', action="store_true", help='Make cards for QCD pseudodata')
 	parser.add_option('--decidata', action="store_true", help='Make cards for data PS 10s')
 	parser.add_option('--jet_type', type=str, help='AK8 or CA15')
+	parser.add_option('--region', type=str, default="SR", help='SR or N2CR')
 
 	(options, args) = parser.parse_args()
 

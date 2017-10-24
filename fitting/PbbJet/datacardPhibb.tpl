@@ -36,9 +36,4 @@ tqqpassCATXnorm rateParam pass_CATX tqq (@0*@1) tqqnormSF,tqqeffSF
 tqqfailCATXnorm rateParam fail_CATX tqq (@0*(1.0-@1*TQQEFF)/(1.0-TQQEFF)) tqqnormSF,tqqeffSF
 tqqnormSF extArg 1.0 [0.0,10.0]
 tqqeffSF extArg 1.0 [0.0,10.0]
-r1p0 flatParam
-r2p0 flatParam
-r0p1 flatParam
-r1p1 flatParam
-r2p1 flatParam
 qcdeff flatParam
