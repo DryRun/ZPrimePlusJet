@@ -17,6 +17,8 @@ analysis_parameters["AK8"] = {
 	"MAX_NPT":2,
 	"DEFAULT_NRHO":2,
 	"DEFAULT_NPT":1,
+	"VFAIL_SF":1.025,
+	"VFAIL_SF_ERR":0.043,
 }
 analysis_parameters["CA15"] = {
 	"MASS_BINS":80,
@@ -26,14 +28,16 @@ analysis_parameters["CA15"] = {
 	"DCSV":0.75,
 	"N2DDT":0.,
 	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
-	"BB_SF":0.91,
-	"BB_SF_ERR":0.03,
-	"V_SF":0.993,
-	"V_SF_ERR":0.043,
+	"BB_SF":1.0,
+	"BB_SF_ERR":0.04,
+	"V_SF":0.968,
+	"V_SF_ERR":0.058,
 	"MAX_NRHO":6,
 	"MAX_NPT":2,
 	"DEFAULT_NRHO":5,
 	"DEFAULT_NPT":1,
+	"VFAIL_SF":1.0628742515,
+	"VFAIL_SF_ERR":0.058,
 }
 
 # Signal sample bookkeeping
@@ -103,10 +107,10 @@ def get_datacard_directory(signal_name, jet_type, qcd=False, decidata=False, reg
 	else:
 		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_mcstat/{}".format(region, jet_type, signal_name)
 
-def get_ftest_directory(signal_name, jet_type, qcd=False, decidata=False, region="SR", nrho=2, npt=1):
+def get_ftest_directory(signal_name, jet_type, nrho1, npt1, nrho2, npt2, qcd=False, decidata=False, region="SR", ):
 	category = "{}_{}".format(region, jet_type)
 	if qcd:
 		category += "_pseudodata"
 	elif decidata:
 		category += "_ps10"
-	return paths["Fits"] + "/ftest/{}/r{}p{}/{}".format(category, nrho, npt, signal_name)
+	return paths["Fits"] + "/ftest/{}/r{}p{}_vs_r{}p{}/{}".format(category, nrho1, npt1, nrho2, npt2, signal_name)
