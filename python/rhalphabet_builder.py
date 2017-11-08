@@ -262,7 +262,7 @@ class RhalphabetBuilder():
                 wbase[cat].writeToFile(self._output_path, False)
             icat += 1
 
-    def prefit(self):
+    def prefit(self, fix_pars={}, fix_pars_rhalphabet={}):
         print "\n\n*** PREFIT ***"
         fbase = r.TFile.Open(self._output_path, 'update')
         fbase.ls()
@@ -277,6 +277,19 @@ class RhalphabetBuilder():
         for cat in categories:
             wbase[cat] = fbase.Get('w_%s' % cat)
             wralphabase[cat] = fralphabase.Get('w_%s' % cat)
+            for parname, parval in fix_pars.iteritems():
+                if wbase[cat].var(parname):
+                    wbase[cat].var(parname).setVal(parval)
+                    wbase[cat].var(parname).setConstant(True)
+                else:
+                    print "[rhalphabet_builder::prefit] WARNING : parameter {} doesn't exist, ignoring".format(parname)
+
+            for parname, parval in fix_pars_rhalphabet.iteritems():
+                if wralphabase[cat].var(parname):
+                    wralphabase[cat].var(parname).setVal(parval)
+                    wralphabase[cat].var(parname).setConstant(True)
+                else:
+                    print "[rhalphabet_builder::prefit] WARNING : parameter {} doesn't exist, ignoring".format(parname)
 
         w = r.RooWorkspace('w')
         w.factory('mu[1.,0.,20.]')
@@ -424,6 +437,12 @@ class RhalphabetBuilder():
 
         icat = 0
         for cat in categories:
+            for parname, parval in fix_pars.iteritems():
+                if wbase[cat].var(parname):
+                    wbase[cat].var(parname).setConstant(False)
+            for parname, parval in fix_pars_rhalphabet.iteritems():
+                if wralphabase[cat].var(parname):
+                    wralphabase[cat].var(parname).setConstant(False)
             reset(wralphabase[cat], fr)
             if icat == 0:
                 getattr(wralphabase[cat], 'import')(fr)
