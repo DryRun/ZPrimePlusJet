@@ -8,8 +8,10 @@ import DAZSLE.ZPrimePlusJet.xbb_config as config
 def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1):
 	if not card_name:
 		# Infer card name automatically
-		if region == "SR" or region == "N2SR":
+		if region == "SR":
 			card_name = "card_rhalphabet_muonCR.txt" # This is the SR+muCR datacard
+		elif region == "N2SR":
+			card_name = "card_rhalphabet_nomuonCR.txt" # This is the SR+muCR datacard
 		elif region == "N2CR":
 			card_name = "card_rhalphabet_N2CR.txt" # This is the N2CR-only datacard
 		elif region == "muCR":
