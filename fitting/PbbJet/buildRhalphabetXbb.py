@@ -33,7 +33,17 @@ re_sbb = re.compile("Sbb(?P<mass>\d+)")
 # - Double b-tag SF from muon control region
 # - Vector(bb) sf... what is this again?
 # - n2ddt_fail: SF is different for N2 fail
-def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1, invert_n2sf=False):
+def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1, region=""):
+    if region == "SR":
+        return GetSF_SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
+    elif region == "N2SR":
+        return GetSF_N2SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
+    elif region == "N2CR":
+        return GetSF_N2CR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
+    else:
+        print "[GetSF] ERROR : Unknown region {}".format(region)
+
+def GetSF_SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1):
     SF = 1.
 
     # bb SF, for MC process with real bb
@@ -52,11 +62,52 @@ def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1,
 
     # V SF, for data-MC agreement for substructure cut
     if process in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
-        if invert_n2sf:
+        SF *= config.analysis_parameters[jet_type]["V_SF"]
+    return SF
+
+# N2SR: Need to apply N2 pass/fail SF, and doubleB pass only.
+def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1):
+    SF = 1.
+
+    # bb SF, for MC process with real bb
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+        SF *= config.analysis_parameters[jet_type]["BB_SF"]
+        if 'zqq' in process:
+            print config.analysis_parameters[jet_type]["BB_SF"]
+
+    # V SF, for data-MC agreement for substructure cut
+    if process in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+        if "pass" in cat:
+            SF *= config.analysis_parameters[jet_type]["V_SF"]
+        elif "fail" in cat:
             SF *= config.analysis_parameters[jet_type]["VFAIL_SF"]
         else:
-            SF *= config.analysis_parameters[jet_type]["V_SF"]
+            print "[GetSFN2SR] ERROR : cat {} doesn't have pass or fail in it!".format(cat)
     return SF
+
+# N2CR: Need to apply N2/fail SF
+def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1):
+    SF = 1.
+
+    # bb SF, for MC process with real bb
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+        if 'pass' in cat:
+            SF *= config.analysis_parameters[jet_type]["BB_SF"]
+            if 'zqq' in process:
+                print config.analysis_parameters[jet_type]["BB_SF"]
+        else:
+            passInt = f.Get(process + '_pass').Integral()
+            failInt = f.Get(process + '_fail').Integral()
+            if failInt > 0:
+                SF *= (1. + (1. - config.analysis_parameters[jet_type]["BB_SF"]) * passInt / failInt)
+                if 'zqq' in process:
+                    print (1. + (1. - config.analysis_parameters[jet_type]["BB_SF"]) * passInt / failInt)
+
+    # V SF, for data-MC agreement for substructure cut
+    if process in ["wqq", "zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+        SF *= config.analysis_parameters[jet_type]["VFAIL_SF"]
+    return SF
+
 
 
 # Load histograms here, rather than rhalphabet_builder.LoadHistograms. I think it's unreasonable to expect that different analyses will share this function!
@@ -66,7 +117,7 @@ def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1,
 # pseudo          = Substitute pseudodata constructed from MC for real data
 # useQCD = For QCD pass, use MC prediction instead of fail * (pass int / fail int)
 # fLoose = 
-def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, decidata=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True, invert_n2sf_pass=False, invert_n2sf_fail=False):
+def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, decidata=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True, region=""):
     pass_hists = {}
     fail_hists = {}
     #f.ls()
@@ -115,8 +166,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             hfail_tmp = input_file.Get(bkg + '_fail').Clone()
             hpass_tmp.Scale(1. / scale)
             hfail_tmp.Scale(1. / scale)
-            hpass_tmp.Scale(GetSF(bkg, 'pass', jet_type, input_file, input_file_loose, invert_n2sf=invert_n2sf_pass))
-            hfail_tmp.Scale(GetSF(bkg, 'fail', jet_type, input_file, invert_n2sf=invert_n2sf_fail))
+            hpass_tmp.Scale(GetSF(bkg, 'pass', jet_type, input_file, input_file_loose, region=region))
+            hfail_tmp.Scale(GetSF(bkg, 'fail', jet_type, input_file, region=region))
             pass_hists_bkg[bkg] = hpass_tmp
             pass_hists_bkg[bkg].SetDirectory(0)
             fail_hists_bkg[bkg] = hfail_tmp
@@ -128,8 +179,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             hfail_tmp = input_file.Get(bkg + '_fail').Clone()
             hpass_tmp.Scale(1. / scale)
             hfail_tmp.Scale(1. / scale)
-            hpass_tmp.Scale(GetSF(bkg, 'pass', jet_type, input_file, invert_n2sf=invert_n2sf_pass))
-            hfail_tmp.Scale(GetSF(bkg, 'fail', jet_type, input_file, invert_n2sf=invert_n2sf_fail))
+            hpass_tmp.Scale(GetSF(bkg, 'pass', jet_type, input_file, region=region))
+            hfail_tmp.Scale(GetSF(bkg, 'fail', jet_type, input_file, region=region))
             pass_hists_bkg[bkg] = hpass_tmp
             fail_hists_bkg[bkg] = hfail_tmp
 
@@ -157,8 +208,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                             hist.SetBinContent(i, j, 0)
             failhist.Scale(1. / scale)
             passhist.Scale(1. / scale)
-            failhist.Scale(GetSF(signal_name, 'fail', jet_type, input_file, invert_n2sf=invert_n2sf_fail))
-            passhist.Scale(GetSF(signal_name, 'pass', jet_type, input_file, invert_n2sf=invert_n2sf_pass))
+            failhist.Scale(GetSF(signal_name, 'fail', jet_type, input_file, region=region))
+            passhist.Scale(GetSF(signal_name, 'pass', jet_type, input_file, region=region))
 
             pass_hists_sig[signal_name] = passhist
             fail_hists_sig[signal_name] = failhist
@@ -176,8 +227,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                             hist.SetBinContent(i, j, 0)
             failhist.Scale(1. / scale)
             passhist.Scale(1. / scale)
-            failhist.Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file, invert_n2sf=invert_n2sf_fail))
-            passhist.Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file, invert_n2sf=invert_n2sf_pass))
+            failhist.Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file, region=region))
+            passhist.Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file, region=region))
 
             pass_hists_sig[signal_name] = passhist
             fail_hists_sig[signal_name] = failhist
@@ -216,11 +267,11 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
 
                 # Apply other SFs
                 if process in config.interpolated_signal_names:
-                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file, invert_n2sf=invert_n2sf_pass))
-                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file, invert_n2sf=invert_n2sf_fail))
+                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, interpolation_file, region=region))
+                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, interpolation_file, region=region))
                 else:
-                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, input_file, invert_n2sf=invert_n2sf_pass))
-                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, input_file, invert_n2sf=invert_n2sf_fail))
+                    this_pass_hist.Scale(GetSF(signal_name, 'pass', jet_type, input_file, region=region))
+                    this_fail_hist.Scale(GetSF(signal_name, 'fail', jet_type, input_file, region=region))
                 pass_hists_syst[syst_dir][process] = this_pass_hist
                 fail_hists_syst[syst_dir][process] = this_fail_hist
 
@@ -483,15 +534,7 @@ def main(options, args):
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    invert_n2sf_pass = False
-    invert_n2sf_fail = False
-    if options.region == "N2CR":
-        invert_n2sf_pass = True
-        invert_n2sf_fail = True
-    elif options.region == "N2SR":
-        invert_n2sf_pass = False
-        invert_n2sf_fail = True
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, invert_n2sf_pass=invert_n2sf_pass, invert_n2sf_fail=invert_n2sf_fail)
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
 
     rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
