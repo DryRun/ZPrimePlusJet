@@ -18,8 +18,10 @@ def run_fits(signal_name, jet_type, region, poly_degree_pairs, pseudodata=False,
 	print "[run_fits] INFO : poly_degree_pairs = ",
 	print poly_degree_pairs
 	datacard_directory = config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
-	if region == "SR" or region == "N2SR":
+	if region == "SR":
 		card_name = "card_rhalphabet_muonCR.txt" # This is the SR+muCR datacard
+	elif region == "N2SR":
+		card_name = "card_rhalphabet_nomuonCR.txt" # This is the SR+muCR datacard
 	elif region == "N2CR":
 		card_name = "card_rhalphabet_N2CR.txt" # This is the N2CR-only datacard
 
