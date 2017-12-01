@@ -216,7 +216,7 @@ class RhalphabetBuilder():
                 wbase[cat].writeToFile(self._output_path, False)
             icat += 1
 
-    def prefit(self):
+    def prefit(self, fix_pars={}, fix_pars_rhalphabet={}):
 
         fbase = r.TFile.Open(self._output_path, 'update')
         fralphabase = r.TFile.Open(self._rhalphabet_output_path, 'update')
@@ -230,6 +230,16 @@ class RhalphabetBuilder():
         for cat in categories:
             wbase[cat] = fbase.Get('w_%s' % cat)
             wralphabase[cat] = fralphabase.Get('w_%s' % cat)
+
+            for parname, parval in fix_pars.iteritems():
+                wbase[cat].var(parname).setVal(parval)
+                wbase[cat].var(parname).setConstant(True)
+
+            for parname, parval in fix_pars_rhalphabet.iteritems():
+                wralphabase[cat].var(parname).setVal(parval)
+                wralphabase[cat].var(parname).setConstant(True)
+
+
 
         w = r.RooWorkspace('w')
         w.factory('mu[1.,0.,20.]')
@@ -371,6 +381,12 @@ class RhalphabetBuilder():
 
         icat = 0
         for cat in categories:
+            for parname, parval in fix_pars.iteritems():
+                wbase[cat].var(parname).setConstant(False)
+
+            for parname, parval in fix_pars_rhalphabet.iteritems():
+                wralphabase[cat].var(parname).setConstant(False)
+
             reset(wralphabase[cat], fr)
             if icat == 0:
                 getattr(wralphabase[cat], 'import')(fr)
