@@ -117,7 +117,7 @@ def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iP
 # pseudo          = Substitute pseudodata constructed from MC for real data
 # useQCD = For QCD pass, use MC prediction instead of fail * (pass int / fail int)
 # fLoose = 
-def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, decidata=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True, region=""):
+def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_type=None, pseudo=False, useQCD=False, decidata=False, loose_file_path=None, scale=1., r_signal=0., blind_range=None, do_shift=True, region="", min_mass=-1.):
     pass_hists = {}
     fail_hists = {}
     #f.ls()
@@ -495,6 +495,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     #    histogram.GetYaxis().GetBinUpEdge(j),
                     #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                     histogram.SetBinContent(i, j, 0.)
+                if min_mass >= 0.:
+                    if massVal < min_mass:
+                        histogram.SetBinContent(i, j, 0.)
         histogram.SetDirectory(0)
     for syst in all_systematics:
         for direction in ["Up", "Down"]:
@@ -517,6 +520,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                                 #    histogram.GetYaxis().GetBinUpEdge(j),
                                 #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                                 histogram.SetBinContent(i, j, 0.)
+                            if min_mass >= 0.:
+                                if massVal < min_mass:
+                                    histogram.SetBinContent(i, j, 0.)
                     histogram.SetDirectory(0)
 
 
@@ -534,7 +540,7 @@ def main(options, args):
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region, min_mass=min_mass)
 
     rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
