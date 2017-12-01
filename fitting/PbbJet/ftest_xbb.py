@@ -13,13 +13,13 @@ import DAZSLE.ZPrimePlusJet.xbb_config as config
 ftest_directory = "/uscms/home/dryu/DAZSLE/data/Fits/ftest/"
 
 # Submit fits via condor
-def run_fits(signal_name, jet_type, region, poly_degree_pairs, pseudodata=False, decidata=False, ntoys=500, toys_per_job=10, signal_mu=0., freeze_nuisances=None):
+def run_fits(signal_name, jet_type, region, poly_degree_pairs, pseudodata=False, decidata=False, ntoys=500, toys_per_job=10, signal_mu=0., freeze_nuisances=None, prefit=False):
 	print "[run_fits] INFO : Called with args {}, {}, {}, ...".format(signal_name, jet_type, region)
 	print "[run_fits] INFO : poly_degree_pairs = ",
 	print poly_degree_pairs
 	datacard_directory = config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
 	if region == "SR":
-		card_name = "card_rhalphabet_muonCR.txt" # This is the SR+muCR datacard
+		card_name = "card_rhalphabet_nomuonCR.txt" # This is the SR+muCR datacard
 	elif region == "N2SR":
 		card_name = "card_rhalphabet_nomuonCR.txt" # This is the SR+muCR datacard
 	elif region == "N2CR":
@@ -72,6 +72,16 @@ def run_fits(signal_name, jet_type, region, poly_degree_pairs, pseudodata=False,
 		run_script.write("#!/bin/bash\n")
 		run_script.write("cp {} tmpcard.txt\n".format(card_name))
 		run_script.write("sed -i 's@{}/@@g' tmpcard.txt\n".format(datacard_directory)) # Combine cards sometimes pick up the absolute path to the workspace, which doesn't work on condor
+
+		if prefit:
+			prefit_fix_pars_str = ""
+			for irho in xrange(config.analysis_parameters[jet_type]["MAX_NRHO"]+1):
+				for ipt in xrange(config.analysis_parameters[jet_type]["MAX_NPT"]+1):
+					if irho > nrho1 or ipt > npt1:
+						prefit_fix_pars_str += "r{}p{}:0,".format(irho, ipt)
+			prefit_fix_pars_str = prefit_fix_pars_str[:-1] # Chop trailing comma
+			run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {}\n".format(prefit_fix_pars_str, signal_name))
+
 
 		command_fit1 = "combine -M MaxLikelihoodFit -v 0 -t -1 --toysFreq tmpcard.txt -n {}_mlfit  --saveNormalizations --plot --saveShapes --saveWorkspace --out plots1".format(job_name1)
 		if freeze_nuisances1:
@@ -149,9 +159,12 @@ def run_fits(signal_name, jet_type, region, poly_degree_pairs, pseudodata=False,
 def get_fit_likelihoods(signal_name, jet_type, region, nrho1, npt1, nrho2, npt2, pseudodata=False, decidata=False):
 	fit_directory = config.get_ftest_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region, nrho1=nrho1, npt1=npt1, nrho2=nrho2, npt2=npt2)
 	f_central1 = TFile("{}/centralfit1.root".format(fit_directory), "READ")
+	if not f_central1.IsOpen():
+		print "[get_fit_likelihoods] ERROR : Couldn't open file {}".format("{}/centralfit1.root".format(fit_directory))
+		sys.exit(1)
 	t_central1 = f_central1.Get("limit")
 	if not t_central1:
-		print "[get_fit_likelihoods] ERROR : Couldn't find tree limit in file {}".format(f_central.GetPath())
+		print "[get_fit_likelihoods] ERROR : Couldn't find tree limit in file {}".format(f_central1.GetPath())
 		sys.exit(1)
 	t_central1.GetEntry(0)
 	limit_central1 = t_central1.GetLeaf("limit").GetValue(0)
@@ -160,7 +173,7 @@ def get_fit_likelihoods(signal_name, jet_type, region, nrho1, npt1, nrho2, npt2,
 	f_central2 = TFile("{}/centralfit2.root".format(fit_directory), "READ")
 	t_central2 = f_central2.Get("limit")
 	if not t_central2:
-		print "[get_fit_likelihoods] ERROR : Couldn't find tree limit in file {}".format(f_central.GetPath())
+		print "[get_fit_likelihoods] ERROR : Couldn't find tree limit in file {}".format(f_central2.GetPath())
 		sys.exit(1)
 	t_central2.GetEntry(0)
 	limit_central2 = t_central2.GetLeaf("limit").GetValue(0)
@@ -325,6 +338,7 @@ if __name__ == "__main__":
 	parser.add_argument("--ntoys", type=int, default=500, help="Number of toys")
 	parser.add_argument("--toys_per_job", type=int, default=10, help="Toys per subjob")
 	parser.add_argument("--freeze_nuisances", type=str, help="Pass to --freezeNuisances argument of combine")
+	parser.add_argument("--prefit", action="store_true", help="Prefit the workspace (recommended)")
 	args = parser.parse_args()
 
 	signals = args.signals.split(",")
@@ -347,7 +361,7 @@ if __name__ == "__main__":
 
 	if args.fits:
 		for signal in signals:
-			run_fits(signal, args.jet_type, args.region, poly_degree_pairs=poly_degree_pairs, pseudodata=args.pseudodata, decidata=args.decidata, ntoys=args.ntoys, signal_mu=args.mu, freeze_nuisances=args.freeze_nuisances, toys_per_job=args.toys_per_job)
+			run_fits(signal, args.jet_type, args.region, poly_degree_pairs=poly_degree_pairs, pseudodata=args.pseudodata, decidata=args.decidata, ntoys=args.ntoys, signal_mu=args.mu, freeze_nuisances=args.freeze_nuisances, toys_per_job=args.toys_per_job, prefit=args.prefit)
 
 	if args.pval:
 		for signal in signals:
