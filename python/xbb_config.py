@@ -21,8 +21,8 @@ analysis_parameters["AK8"] = {
 	"VFAIL_SF_ERR":0.043,
 }
 analysis_parameters["CA15"] = {
-	"MASS_BINS":80,
-	"MSD":[40, 600],
+	"MASS_BINS":76,
+	"MSD":[68, 600],
 	"RHO":[-4.7, -1.0],
 	"PT":[450., 1000.],
 	"DCSV":0.75,
