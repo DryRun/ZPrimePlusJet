@@ -5,7 +5,7 @@ gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJ
 import DAZSLE.ZPrimePlusJet.xbb_config as config
 
 
-def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1):
+def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1, prefit=False):
 	if not card_name:
 		# Infer card name automatically
 		if region == "SR":
@@ -31,6 +31,16 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 	run_script.write("mkdir -pv plots_{}\n".format(job_name))
 	run_script.write("sed -i 's@{}/@@g' tmpcard.txt\n".format(top_directory)) # Combine cards sometimes pick up the absolute path to the workspace, which doesn't work on condor
 
+	# Prefit
+	if prefit:
+		prefit_fix_pars_str = ""
+		for irho in xrange(config.analysis_parameters[jet_type]["MAX_NRHO"]+1):
+			for ipt in xrange(config.analysis_parameters[jet_type]["MAX_NPT"]+1):
+				if irho > nrho or ipt > npt:
+					prefit_fix_pars_str += "r{}p{}:0,".format(irho, ipt)
+		prefit_fix_pars_str = prefit_fix_pars_str[:-1] # Chop trailing comma
+		run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {}\n".format(prefit_fix_pars_str, signal_name))
+
 	combine_command = "combine -M {} -v {} -t -1 --toysFreq tmpcard.txt -n {}".format(method, verbose, job_name)
 	if method == "Asymptotic":
 		combine_command += " --saveWorkspace"
@@ -45,7 +55,11 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 	combine_command += freeze_string
 	combine_command += " 2>&1"
 	run_script.write(combine_command + "\n")
+
+	# Prepare return objects
 	run_script.write("tar -czvf plots_{}.tar.gz plots_{}\n".format(job_name, job_name))
+	run_script.write("mv base.root base_{}.root\n".format(job_name))
+	run_script.write("mv {} {}.{}\n".format(card_name, card_name, job_name))
 	run_script.close()
 	print combine_command
 
@@ -75,6 +89,7 @@ if __name__ == "__main__":
 	parser.add_argument("--verbose", type=int, default="0", help="Combine verbosity")
 	parser.add_argument("--nrho", type=int, help="Polynomial degree in rho")
 	parser.add_argument("--npt", type=int, help="Polynomial degree in pt")
+	parser.add_argument("--prefit", action="store_true", help="Prefit the workspace")
 	args = parser.parse_args()
 
 	if args.signals == "all":
@@ -100,5 +115,5 @@ if __name__ == "__main__":
 						npt = args.npt
 					else:
 						npt = config.analysis_parameters[jet_type]["DEFAULT_NPT"]
-					csub_combine(signal_name, jet_type, method=method, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=nrho, npt=npt)
+					csub_combine(signal_name, jet_type, method=method, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=nrho, npt=npt, prefit=args.prefit)
 
