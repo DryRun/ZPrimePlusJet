@@ -274,7 +274,7 @@ def main(options, args):
 					sys.exit(1)
 				histograms[process_name] = this_file.Get(histogram_name).ProjectionX()
 				if not "data" in process_name:
-					histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file))
+					histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file, region="muCR"))
 				# Rename data histogram to data_obs_<pass|fail>. The muCR histograms come in named as data_singlemu_...
 				if "data" in process_name:
 					histograms[process_name].SetName("data_obs_" + box)
@@ -287,7 +287,7 @@ def main(options, args):
 								print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name_syst, this_file.GetPath())
 								sys.exit(1)
 							histograms[process_name_syst] = this_file.Get(process_name_syst)
-							histograms[process_name_syst].Scale(GetSF(proc,box,options.jet_type,this_file))
+							histograms[process_name_syst].Scale(GetSF(proc,box,options.jet_type,this_file, region="muCR"))
 
 		if options.fake_signal:
 			print "Faking signal histograms"
@@ -299,7 +299,21 @@ def main(options, args):
 					sig_width = sig_mass / 10.
 					histograms[process_name].Reset()
 					gaussian = TF1("mygaus","TMath::Gaus(x,{},{})".format(sig_mass, sig_width), 0., 1000.)
-					histograms[process_name].FillRandom("mygaus", 1000)
+					if "TH2" in histograms[process_name].IsA().GetName():
+						print "FillRandom, TH2 version, for {}".format(histograms[process_name].GetName())
+						# Histogram is a TH2 (1 bin on y-axis). Need to FillRandom to TH1.
+						this_th1 = histograms[process_name].ProjectionX()
+						this_th1.FillRandom("mygaus", 1000)
+						for bin in xrange(1, this_th1.GetNbinsX()+1):
+							histograms[process_name].SetBinContent(bin, 1, this_th1.GetBinContent(bin))
+							histograms[process_name].SetBinError(bin, 1, this_th1.GetBinError(bin))
+					elif "TH1" in histograms[process_name].IsA().GetName():
+						# Histogram in a TH1, can use FillRandom directly
+						print "FillRandom, TH1 version, for {}".format(histograms[process_name].GetName())
+						histograms[process_name].FillRandom("mygaus", 1000)
+					else:
+						print "I don't know what to do with a {}".format(histograms[process_name].IsA().GetName())
+						sys.exit(1)
 					print histograms[process_name]
 					print histograms[process_name].GetName()
 
@@ -315,14 +329,32 @@ def main(options, args):
 						for direction in ["Up", "Down"]:
 							process_name_syst = "{}_{}{}".format(process_name, syst, direction)
 							histograms[process_name_syst].Reset()
-							histograms[process_name_syst].FillRandom("mygaus", 1000)
+							if "TH2" in histograms[process_name_syst].IsA().GetName():
+								print "FillRandom, TH2 version, for {}".format(histograms[process_name_syst].GetName())
+								# Histogram is a TH2 (1 bin on y-axis). Need to FillRandom to TH1.
+								this_th1 = histograms[process_name_syst].ProjectionX()
+								this_th1.FillRandom("mygaus", 1000)
+								for bin in xrange(1, this_th1.GetNbinsX()+1):
+									histograms[process_name_syst].SetBinContent(bin, 1, this_th1.GetBinContent(bin))
+									histograms[process_name_syst].SetBinError(bin, 1, this_th1.GetBinError(bin))
+							elif "TH1" in histograms[process_name_syst].IsA().GetName():
+								# Histogram in a TH1, can use FillRandom directly
+								print "FillRandom, TH1 version, for {}".format(histograms[process_name_syst].GetName())
+								histograms[process_name_syst].FillRandom("mygaus", 1000)
+							else:
+								print "I don't know what to do with a {}".format(histograms[process_name_syst].IsA().GetName())
+								sys.exit(1)
 							#hist_msd_slice = histograms[process_name_syst].ProjectionX()
 							#hist_msd_slice.FillRandom("mygaus", 1000)
 							#for xbin in xrange(1, histograms[process_name_syst].GetNbinsX() + 1):
 							#	for ybin in xrange(1, histograms[process_name_syst].GetNbinsY() + 1):
 							#		histograms[process_name_syst].SetBinContent(xbin, ybin, hist_msd_slice.GetBinContent(xbin))
 							#		histograms[process_name_syst].SetBinError(xbin, ybin, hist_msd_slice.GetBinError(xbin))
-							histograms[process_name_syst].Scale(0.01 / histograms[process_name_syst].Integral())
+							if histograms[process_name_syst].Integral() > 0:
+								histograms[process_name_syst].Scale(0.01 / histograms[process_name_syst].Integral())
+							else:
+								print "ERROR : histograms[{}].Integral() = {}".format(process_name_syst, histograms[process_name_syst].Integral())
+								sys.exit(1)
 
 
 		outFile = 'datacard_muonCR.root'
