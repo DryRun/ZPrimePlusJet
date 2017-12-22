@@ -4,7 +4,7 @@ analysis_parameters = {}
 analysis_parameters["AK8"] = {
 	"MASS_BINS":80,
 	"MSD":[40, 600],
-	"RHO":[-5.5, -2.0],
+	"RHO":[-6.0, -2.1],
 	"PT":[450., 1000.],
 	"DCSV":0.9,
 	"N2DDT":0.,
@@ -25,7 +25,7 @@ analysis_parameters["CA15"] = {
 	"MSD":[68, 600],
 	"RHO":[-4.7, -1.0],
 	"PT":[450., 1000.],
-	"DCSV":0.75,
+	"DCSV":0.9,
 	"N2DDT":0.,
 	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
 	"BB_SF":1.0,
