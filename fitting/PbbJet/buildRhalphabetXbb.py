@@ -36,6 +36,8 @@ re_sbb = re.compile("Sbb(?P<mass>\d+)")
 def GetSF(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1, region=""):
     if region == "SR":
         return GetSF_SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
+    elif region == "muCR":
+        return GetSF_SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
     elif region == "N2SR":
         return GetSF_N2SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=-1)
     elif region == "N2CR":
@@ -47,7 +49,7 @@ def GetSF_SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=
     SF = 1.
 
     # bb SF, for MC process with real bb
-    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125", "tqq"] or "Pbb" in process or "Sbb" in process:
         if 'pass' in cat:
             SF *= config.analysis_parameters[jet_type]["BB_SF"]
             if 'zqq' in process:
@@ -70,7 +72,7 @@ def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iP
     SF = 1.
 
     # bb SF, for MC process with real bb
-    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125", "tqq"] or "Pbb" in process or "Sbb" in process:
         SF *= config.analysis_parameters[jet_type]["BB_SF"]
         if 'zqq' in process:
             print config.analysis_parameters[jet_type]["BB_SF"]
@@ -90,7 +92,7 @@ def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iP
     SF = 1.
 
     # bb SF, for MC process with real bb
-    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"] or "Pbb" in process or "Sbb" in process:
+    if process in ["zqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125", "tqq"] or "Pbb" in process or "Sbb" in process:
         if 'pass' in cat:
             SF *= config.analysis_parameters[jet_type]["BB_SF"]
             if 'zqq' in process:
@@ -108,6 +110,9 @@ def GetSF_N2SR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iP
         SF *= config.analysis_parameters[jet_type]["VFAIL_SF"]
     return SF
 
+# muCR: I think this is the same as SR. 
+def GetSF_muCR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iPt=-1):
+    return GetSF_SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=iPt)
 
 
 # Load histograms here, rather than rhalphabet_builder.LoadHistograms. I think it's unreasonable to expect that different analyses will share this function!
@@ -540,7 +545,7 @@ def main(options, args):
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region, min_mass=min_mass)
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
 
     rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
