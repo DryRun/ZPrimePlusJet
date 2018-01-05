@@ -27,7 +27,7 @@ analysis_parameters["CA15"] = {
 	"RHO":[-4.7, -1.0],
 	"PT":[450., 1000.],
 	"DCSV":0.9,
-	"DCSV_LOOSE":0.9,
+	"DCSV_LOOSE":0.8,
 	"N2DDT":0.,
 	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
 	"BB_SF":1.0,
