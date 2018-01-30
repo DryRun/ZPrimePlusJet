@@ -362,6 +362,7 @@ def main(options, args):
 		os.system("mkdir -pv {}".format(output_directory))
 		workspace_path = "{}/{}".format(output_directory, "workspace_muonCR.root")
 		datacard_path = "{}/{}".format(output_directory, "datacard_muonCR.txt")
+		print "[debug] Saving workspace to " + workspace_path
 		outputFile = TFile.Open(workspace_path,'recreate')
 		outputFile.cd()
 		w = RooWorkspace('w_muonCR')
@@ -372,7 +373,9 @@ def main(options, args):
 		for key, histo in histograms.iteritems():
 			#histo.Rebin(23)
 			#ds = RooDataHist(key,key,RooArgList(w.var('y')),histo)
-			print "\n[debug] Workspace saving {}".format(key)	
+			print "\n[debug] Saving key {} to workspace".format(key)
+			print "[debug]\tHistogram: ",
+			histo.Print()
 			ds = RooDataHist(key,key,RooArgList(w.var('x')),histo)
 			getattr(w,'import')(ds, RooCmdArg())
 		w.Write()

@@ -540,7 +540,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
 def main(options, args):
     input_file = TFile(config.get_histogram_file(options.region, options.jet_type), "READ")
     interpolation_file = TFile(config.get_interpolation_file(options.region, options.jet_type), "READ")
-    odir =  "{}/Xbb_inputs/{}_{}/".format(config.paths["LimitSetting"], options.region, options.jet_type)
+    #odir =  "{}/Xbb_inputs/{}_{}/".format(config.paths["LimitSetting"], options.region, options.jet_type)
+    odir = config.get_datacard_directory("Sbb125", options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region) + "/../"
 
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
@@ -565,9 +566,12 @@ def main(options, args):
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
         os.system("mkdir -pv {}".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
-        print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
-        os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
-        os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        #print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
+        #os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        #os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        print "ln -s {}/base.root {}/base.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
+        os.system("ln -s {}/base.root {}/base.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        os.system("ln -s {}/rhalphabase.root {}/rhalphabase.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
 
     input_file.Close()
     interpolation_file.Close()

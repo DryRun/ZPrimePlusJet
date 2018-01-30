@@ -4,7 +4,6 @@ from ROOT import *
 gSystem.Load(os.path.expandvars("$CMSSW_BASE/lib/$SCRAM_ARCH/libDAZSLEPhiBBPlusJet.so"))
 import DAZSLE.ZPrimePlusJet.xbb_config as config
 
-
 def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1, prefit=False):
 	if not card_name:
 		# Infer card name automatically
@@ -17,19 +16,21 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 		elif region == "muCR":
 			card_name = "datacard_muonCR.txt" # This is the muCR-only datacard
 
-	top_directory = config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
+	datacard_directory = config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
+	working_directory = config.get_limit_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
+	os.system("mkdir -pv {}".format(working_directory))
 	cwd = os.getcwd()
-	os.chdir(top_directory)
-	input_files = ["{}/base.root".format(top_directory), "{}/rhalphabase.root".format(top_directory), "{}/{}".format(top_directory, card_name)]
+	os.chdir(datacard_directory)
+	input_files = ["{}/base.root".format(datacard_directory), "{}/rhalphabase.root".format(datacard_directory), "{}/{}".format(datacard_directory, card_name)]
 
 	# Run script
 	job_name = "combine_{}_{}_{}_{}_r{}p{}".format(signal_name, jet_type, method, region, nrho, npt)
-	run_script_path = "{}/run_combine_{}.sh".format(top_directory, job_name)
+	run_script_path = "{}/run_combine_{}.sh".format(datacard_directory, job_name)
 	run_script = open(run_script_path, 'w')
 	run_script.write("#!/bin/bash\n")
 	run_script.write("cp {} tmpcard.txt\n".format(card_name))
 	run_script.write("mkdir -pv plots_{}\n".format(job_name))
-	run_script.write("sed -i 's@{}/@@g' tmpcard.txt\n".format(top_directory)) # Combine cards sometimes pick up the absolute path to the workspace, which doesn't work on condor
+	run_script.write("sed -i 's@{}/@@g' tmpcard.txt\n".format(datacard_directory)) # Combine cards sometimes pick up the absolute path to the workspace, which doesn't work on condor
 
 	# Prefit
 	if prefit:
@@ -58,13 +59,15 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 
 	# Prepare return objects
 	run_script.write("tar -czvf plots_{}.tar.gz plots_{}\n".format(job_name, job_name))
-	run_script.write("mv base.root base_{}.root\n".format(job_name))
+	#run_script.write("mv base.root base_{}.root\n".format(job_name))
+	run_script.write("rm -f base.root\n")
+	run_script.write("rm -f rhalphabase.root\n")
 	run_script.write("mv {} {}.{}\n".format(card_name, card_name, job_name))
 	run_script.close()
 	print combine_command
 
 	# csub script
-	csub_script_path = "{}/csub_{}.sh".format(top_directory, job_name)
+	csub_script_path = "{}/csub_{}.sh".format(datacard_directory, job_name)
 	csub_script = open(csub_script_path, 'w')
 	csub_script.write("#!/bin/bash\n")
 	csub_command = "csub {} -F {} --cmssw --no_retar ".format(run_script_path, ",".join(input_files))

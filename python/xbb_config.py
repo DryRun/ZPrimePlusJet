@@ -23,13 +23,13 @@ analysis_parameters["AK8"] = {
 }
 analysis_parameters["CA15"] = {
 	"MASS_BINS":76,
-	"MSD":[68, 600],
+	"MSD":[82, 600],
 	"RHO":[-4.7, -1.0],
-	"PT":[450., 1000.],
+	"PT":[500., 1000.],
 	"DCSV":0.9,
 	"DCSV_LOOSE":0.8,
 	"N2DDT":0.,
-	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
+	"PT_BINS":[500.,550.,600.,675.,800.,1000.],
 	"BB_SF":1.0,
 	"BB_SF_ERR":0.04,
 	"V_SF":0.968,
@@ -108,6 +108,14 @@ def get_datacard_directory(signal_name, jet_type, qcd=False, decidata=False, reg
 		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_ps10_mcstat/{}".format(region, jet_type, signal_name)
 	else:
 		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/cards_mcstat/{}".format(region, jet_type, signal_name)
+
+def get_limit_directory(signal_name, jet_type, qcd=False, decidata=False, region="SR"):
+	if qcd:
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/limits_qcd_mcstat/{}".format(region, jet_type, signal_name)
+	elif decidata:
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/limits_ps10_mcstat/{}".format(region, jet_type, signal_name)
+	else:
+		return paths["LimitSetting"] + "Xbb_inputs/{}_{}/limits_mcstat/{}".format(region, jet_type, signal_name)
 
 def get_ftest_directory(signal_name, jet_type, nrho1, npt1, nrho2, npt2, qcd=False, decidata=False, region="SR", ):
 	category = "{}_{}".format(region, jet_type)
