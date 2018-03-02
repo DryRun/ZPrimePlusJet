@@ -1,0 +1,27 @@
+python signal_interpolations.py --interpolate --jet_type AK8 --output_range 50,525,25
+python signal_interpolations.py --interpolate --jet_type CA15 --output_range 50,525,25
+python signal_interpolations.py --interpolate_muCR --jet_type AK8 --output_range 50,525,25
+python signal_interpolations.py --interpolate_muCR --jet_type CA15 --output_range 50,525,25
+
+python signal_interpolations.py --validate 100 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 200 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 200 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 350 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
+
+python signal_interpolations.py --validate 100 --models ZPrime --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --models ZPrime --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --models ZPrime --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 200 --models ZPrime --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 200 --models ZPrime --jet_type CA15 --output_range 50,425,25
+
+
+python writeMuonCRDatacardXbb.py -j AK8
+python writeMuonCRDatacardXbb.py -j CA15
+
+python makeCardsXbb.py --no-mcstat-shape --jet_type AK8 --qcd
+python makeCardsXbb.py --no-mcstat-shape --jet_type CA15 --qcd
+
+python buildRhalphabetXbb.py --pseudo --jet_type AK8 --prefit  #--use-qcd
+python buildRhalphabetXbb.py --pseudo --jet_type CA15 --prefit  #--use-qcd

@@ -1,0 +1,65 @@
+python signal_interpolations.py --interpolate --jet_type AK8 --output_range 50,525,25 --region N2CR
+python signal_interpolations.py --interpolate --jet_type CA15 --output_range 50,525,25 --region N2CR
+python signal_interpolations.py --interpolate_muCR --jet_type AK8 --output_range 50,525,25 --region N2CR
+python signal_interpolations.py --interpolate_muCR --jet_type CA15 --output_range 50,525,25 --region N2CR
+ 
+
+python makeCardsXbb.py --no-mcstat-shape --jet_type AK8  --region N2CR --decidata #--qcdb
+python makeCardsXbb.py --no-mcstat-shape --jet_type CA15 --region N2CR --decidata #--qcd
+
+python buildRhalphabetXbb.py --jet_type AK8 --prefit   --region N2CR --decidata #--use-qcd
+python buildRhalphabetXbb.py --jet_type CA15 --prefit   --region N2CR --decidata #--use-qcd
+
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 1 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 2 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 3 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 2 --npt 2 --decidata
+
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 1 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 2 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 3 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 4 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 5 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 6 --npt 1 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 4 --npt 2 --decidata
+python combine_xbb.py --regions N2CR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 5 --npt 2 --decidata
+
+
+
+
+
+
+
+python signal_interpolations.py --interpolate --jet_type AK8 --output_range 50,525,25 --region N2SR
+python signal_interpolations.py --interpolate --jet_type CA15 --output_range 50,525,25 --region N2SR
+python signal_interpolations.py --interpolate_muCR --jet_type AK8 --output_range 50,525,25 --region N2SR
+python signal_interpolations.py --interpolate_muCR --jet_type CA15 --output_range 50,525,25 --region N2SR
+
+python makeCardsXbb.py --no-mcstat-shape --jet_type AK8  --region N2SR --decidata #--qcdb
+python makeCardsXbb.py --no-mcstat-shape --jet_type CA15 --region N2SR --decidata #--qcd
+
+python buildRhalphabetXbb.py --jet_type AK8 --prefit --region N2SR --decidata #--use-qcd
+python buildRhalphabetXbb.py --jet_type CA15 --prefit --region N2SR --decidata #--use-qcd
+
+
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 1 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 2 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 3 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types AK8 --nrho 2 --npt 2 --decidata
+
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 1 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 2 --npt 1 --decidata --prefit
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 3 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 4 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 5 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 6 --npt 1 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 2 --npt 2 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 3 --npt 2 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 4 --npt 2 --decidata
+python combine_xbb.py --regions N2SR --methods MaxLikelihoodFit --signals Sbb125 --jet_types CA15 --nrho 5 --npt 2 --decidata
+
+python ftest_xbb.py --fits --region N2SR --poly_degrees 2:1:3:1,3:1:4:1,4:1:5:1,2:1:2:2,3:1:3:2,2:2:3:2,3:2:4:2 --jet_type CA15 --decidata
+python ftest_xbb.py --pval --region N2SR --poly_degrees 2:1:3:1,3:1:4:1,4:1:5:1,2:1:2:2,3:1:3:2,2:2:3:2,3:2:4:2 --jet_type CA15 --decidata
+
+python ftest_xbb.py --fits --region SR --poly_degrees 2:1:3:1,3:1:4:1,4:1:5:1,2:1:2:2,3:1:3:2,4:1:4:2,5:1:5:2,2:2:3:2,3:2:4:2,4:2:5:2 --jet_type CA15 --decidata
+python ftest_xbb.py --pval --region SR --poly_degrees 2:1:3:1,3:1:4:1,4:1:5:1,2:1:2:2,3:1:3:2,4:1:4:2,5:1:5:2,2:2:3:2,3:2:4:2,4:2:5:2 --jet_type CA15 --decidata
