@@ -1,6 +1,9 @@
 import os
 
 analysis_parameters = {}
+# Note: PT_BINS = bins used to create 2D histograms in event_selection_histograms.py
+# FIT_PT_BINS = bin indices to use in fit.
+# 
 analysis_parameters["AK8"] = {
 	"MASS_BINS":80,
 	"MSD":[40, 600],
@@ -10,32 +13,34 @@ analysis_parameters["AK8"] = {
 	"DCSV_LOOSE":0.8,
 	"N2DDT":0.,
 	"PT_BINS":[450., 500.,550.,600.,675.,800.,1000.],
+	"FIT_PT_BINS":[1,2,3,4,5,6],
 	"BB_SF":0.91,
 	"BB_SF_ERR":0.03,
 	"V_SF":0.993,
 	"V_SF_ERR":0.043,
-	"MAX_NRHO":3,
-	"MAX_NPT":2,
+	"MAX_NRHO":5,
+	"MAX_NPT":3,
 	"DEFAULT_NRHO":2,
 	"DEFAULT_NPT":1,
 	"VFAIL_SF":1.025,
 	"VFAIL_SF_ERR":0.043,
 }
 analysis_parameters["CA15"] = {
-	"MASS_BINS":76,
+	"MASS_BINS":74,
 	"MSD":[82, 600],
 	"RHO":[-4.7, -1.0],
 	"PT":[500., 1000.],
 	"DCSV":0.9,
 	"DCSV_LOOSE":0.8,
 	"N2DDT":0.,
-	"PT_BINS":[500.,550.,600.,675.,800.,1000.],
+	"PT_BINS":[450.,500.,550.,600.,675.,800.,1000.],
+	"FIT_PT_BINS":[2,3,4,5,6],
 	"BB_SF":1.0,
 	"BB_SF_ERR":0.04,
 	"V_SF":0.968,
 	"V_SF_ERR":0.058,
 	"MAX_NRHO":6,
-	"MAX_NPT":2,
+	"MAX_NPT":3,
 	"DEFAULT_NRHO":5,
 	"DEFAULT_NPT":1,
 	"VFAIL_SF":1.0628742515,

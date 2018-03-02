@@ -47,7 +47,7 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	os.chdir(working_directory)
 	input_files = ["{}/base.root".format(datacard_directory), "{}/rhalphabase.root".format(datacard_directory), "{}/{}".format(datacard_directory, card_name)]
 	if muonCR:
-		input_files.append("{}/workspace_muonCR.root")
+		input_files.append("{}/workspace_muonCR.root".format(datacard_directory))
 
 	# Run script
 	run_script_path = "{}/run_combine_{}.sh".format(working_directory, job_name)
@@ -64,14 +64,14 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 			if irho > nrho or ipt > npt:
 				prefit_fix_pars_str += "r{}p{}:0,".format(irho, ipt)
 	prefit_fix_pars_str = prefit_fix_pars_str[:-1] # Chop trailing comma
-	run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {}\n".format(prefit_fix_pars_str, signal_name))
+	run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {} --cats {} --no_backup_original  2>&1 | tee log_prefit_{}.txt\n".format(prefit_fix_pars_str, signal_name, ",".join([str(x) for x in config.analysis_parameters[jet_type]["FIT_PT_BINS"]]), job_name))
 
 	# String for freezing nuisance parameters. Both manually specified and extra polnomial terms.
 	frozen_nps = []
 	for irho in xrange(config.analysis_parameters[jet_type]["MAX_NRHO"]+1):
 		for ipt in xrange(config.analysis_parameters[jet_type]["MAX_NPT"]+1):
 			if irho > nrho or ipt > npt:
-				frozen_nps.append("r{}p{},".format(irho, ipt))
+				frozen_nps.append("r{}p{}".format(irho, ipt))
 	if freeze_nuisances:
 		frozen_nps.extend(freeze_nuisances)
 	if len(frozen_nps) >= 1:
@@ -93,17 +93,17 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	run_script.write("\tthen\n")
 
 	run_script.write("\tmkdir plots\n")
-	command_mlf = "combine -M MaxLikelihoodFit -v 0 -t -1 --toysFreq tmpcard.txt -n {}_mlfit  --saveNormalizations --plot --saveShapes --saveWorkspace --out plots".format(job_name + "_maxlikelihoodfit")
+	command_mlf = "combine -M MaxLikelihoodFit -v 0 tmpcard.txt -n {}_mlfit  --saveNormalizations --plot --saveShapes --saveWorkspace --out plots ".format(job_name + "_maxlikelihoodfit")
 	command_mlf += freeze_string
-	run_script.write("\t" + command_mlf + "\n")
+	run_script.write("\t" + command_mlf + " 2>&1 | tee log_mlfit_{}.txt\n".format(job_name))
 	run_script.write("\ttar -czvf plots.tar.gz plots\n")
 
 	# GoF of central fit
 	for algorithm in algorithms:
-		command_centralgof = "combine -M GoodnessOfFit --algorithm {} --rMax 20 --rMin -20 -v {} -t -1 --toysFreq tmpcard.txt -n {}".format(algorithm, verbose, job_name + "_" + algorithm)
+		command_centralgof = "combine -M GoodnessOfFit --algorithm {} --rMax 20 --rMin -20 -v {} tmpcard.txt -n {}".format(algorithm, verbose, job_name + "_" + algorithm)
 		command_centralgof += freeze_string
 		command_centralgof += fixed_signal_strength_string
-		run_script.write("\t" + command_centralgof + " 2>&1\n")
+		run_script.write("\t" + command_centralgof + " 2>&1 | tee log_gof_central_{}_{}.txt\n".format(job_name, algorithm))
 
 	run_script.write("fi\n")
 
@@ -117,7 +117,7 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 		command_goftoys = "combine tmpcard.txt -M GoodnessOfFit --algorithm {} --rMax 20 --rMin -20 -t {} --toysFile {} -n {} --seed $1".format(algorithm, toys_per_job, toys_filename, job_name + "_" + algorithm + "_toysfit" + "_subjob$1")
 		command_goftoys += freeze_string
 		command_goftoys += fixed_signal_strength_string
-		run_script.write(command_goftoys + "  2>&1\n")
+		run_script.write(command_goftoys + "  2>&1 | tee log_gof_toys$1_{}_{}.txt\n".format(job_name, algorithm))
 
 
 	# Prepare return objects
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 	poly_degrees_string = {}
 	if args.poly_degrees == "":
 		poly_degrees_string["AK8"] = "1:1,2:1,3:1,4:1,1:2,2:2,3:2"
-		poly_degrees_string["CA15"] = "1:1,2:1,3:1,4:1,5:1,6:1,1:2,2:2,3:2,4:2,5:2,1:3,2:3,3:3"
+		poly_degrees_string["CA15"] = "1:1,2:1,3:1,4:1,5:1,6:1,1:2,2:2,3:2,4:2,5:2,1:3,2:3,3:3,4:3"
 	else:
 		poly_degrees_string["AK8"] = args.poly_degrees
 		poly_degrees_string["CA15"] = args.poly_degrees

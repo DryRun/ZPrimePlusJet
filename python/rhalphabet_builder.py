@@ -262,15 +262,17 @@ class RhalphabetBuilder():
                 wbase[cat].writeToFile(self._output_path, False)
             icat += 1
 
-    def prefit(self, fix_pars={}, fix_pars_rhalphabet={}):
+    def prefit(self, fix_pars={}, fix_pars_rhalphabet={}, category_indices=None):
         print "\n\n*** PREFIT ***"
         fbase = r.TFile.Open(self._output_path, 'update')
         fbase.ls()
         fralphabase = r.TFile.Open(self._rhalphabet_output_path, 'update')
         fralphabase.ls()
-        categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
-                      'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
-
+        categories = []
+        for cat in category_indices:
+            categories.append("pass_cat{}".format(cat))
+            categories.append("fail_cat{}".format(cat))
+        #categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6','fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
 
         wbase = {}
         wralphabase = {}

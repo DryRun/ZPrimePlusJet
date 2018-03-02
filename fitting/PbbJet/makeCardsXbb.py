@@ -25,21 +25,26 @@ def main(options,args):
 		input_file = TFile.Open(config.get_histogram_file(options.region, options.jet_type))
 		intp_file = TFile.Open(config.get_interpolation_file(options.region, options.jet_type))
 		boxes = ['pass', 'fail']
-		sigs = [signal_name]
-		bkgs = ['zqq','wqq','qcd','tqq',"hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
+		sigs = {"pass":[signal_name], "fail":[signal_name]}
+		bkgs = {
+			"pass":['zqq','wqq','qcd','tqq',"hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"], 
+			"fail":['zqq','wqq','qcd','tqq',"hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
+		}
+		if options.region == "N2SR":
+			bkgs["fail"].remove("wqq") # Not much wqq passing 2xbtag and failing N2
 		systs = ["JER", "JES", "PU"] #['JER','JES']
 
-		nBkgd = len(bkgs)
-		nSig = len(sigs)
+		#nBkgd = len(bkgs)
+		#nSig = len(sigs)
 
 		histograms = {}
 
-		for proc in (sigs+bkgs):
-			for box in boxes:
+		for box in boxes:
+			for proc in (sigs[box] + bkgs[box]):
 				process_name = "{}_{}".format(proc,box)
-				print 'getting histogram for process: {}'.format(process_name)
-				print proc
-				print config.interpolated_signal_names
+				#print 'getting histogram for process: {}'.format(process_name)
+				#print proc
+				#print config.interpolated_signal_names
 				if proc in config.interpolated_signal_names:
 					histograms[process_name] = intp_file.Get(process_name)
 					if not histograms[process_name]:
@@ -64,8 +69,10 @@ def main(options,args):
 							if not histograms[process_name_syst]:
 								print "[makeCardsXbb] ERROR : Couldn't find histogram {} in file {}".format(process_name_syst, input_file.GetPath())
 								sys.exit(1)
-
-		dctpl = open("datacardPhibb.tpl")
+		if options.region == "N2SR":
+			dctpl = open("datacardPhibb_N2SR.tpl")
+		else:
+			dctpl = open("datacardPhibb.tpl")
 		#dctpl = open("datacardZbb.tpl")
 
 		linel = [];
@@ -74,7 +81,7 @@ def main(options,args):
 			line = line.replace("SIGNALNAMESIGNALMASS", signal_name)
 			linel.append(line.strip())
 
-		for i in range(1,len(params[options.jet_type]["PT_BINS"])-1+1):
+		for i in params[options.jet_type]["FIT_PT_BINS"]:# range(1,len(params[options.jet_type]["PT_BINS"])-1+1):
 
 			errs = {}
 			#jesErrs = {}
@@ -84,7 +91,7 @@ def main(options,args):
 			#mcstatErrs = {}
 			#scaleptErrs = {}
 			for box in boxes:
-				for proc in (sigs+bkgs):
+				for proc in (sigs[box] + bkgs[box]):
 					#print "Taking integral of {}".format('%s_%s'%(proc,box))
 					process_name = "{}_{}".format(proc, box)
 					errs[process_name] = {}
@@ -144,7 +151,7 @@ def main(options,args):
 			mcStatGroupString = 'mcstat group ='
 			qcdGroupString = 'qcd group = qcdeff'
 			for box in boxes:
-				for proc in sigs+bkgs:
+				for proc in sigs[box] + bkgs[box]:
 					process_name = "{}_{}".format(proc, box)
 					for j in range(1,params[options.jet_type]["MASS_BINS"]):
 						if options.noMcStatShape:
@@ -153,7 +160,7 @@ def main(options,args):
 							mcStatStrings[process_name,i,j] = '{}cat{}mcstat{} shape'.format(process_name,i,j)
 
 			for box in boxes:
-				for proc in sigs+bkgs:
+				for proc in sigs[box] + bkgs[box]:
 					process_name = "{}_{}".format(proc, box)
 					if proc=='qcd':
 						jesString += ' -'
@@ -182,7 +189,7 @@ def main(options,args):
 						vString += ' {:.3f}'.format(errs[process_name]["veff"])
 					for j in range(1,params[options.jet_type]["MASS_BINS"]):
 						for box1 in boxes:
-							for proc1 in sigs+bkgs:
+							for proc1 in sigs[box1] + bkgs[box1]:
 								if proc1==proc and box1==box:
 									mcStatStrings['%s_%s'%(proc1,box1),i,j] += '\t{:.3f}'.format(errs[process_name]["mcstat"][j])
 								else:
@@ -240,7 +247,7 @@ def main(options,args):
 					newline = newline.replace('CATX',tag)
 				dctmp.write(newline + "\n")
 			for box in boxes:
-				for proc in sigs+bkgs:
+				for proc in sigs[box] + bkgs[box]:
 					process_name = "{}_{}".format(proc, box)
 					if options.noMcStatShape and proc != "qcd":
 						#print 'include {}cat{}mcstat'%(process_name, i)
@@ -279,16 +286,44 @@ def main(options,args):
 
 		# Combine category cards
 		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region)
+		cats = config.analysis_parameters[options.jet_type]["FIT_PT_BINS"]
+		#ncats = len(config.analysis_parameters[options.jet_type]["PT_BINS"]) - 1
 		if options.region == "N2CR":
-			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
-			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+			combine_command = "combineCards.py "
+			for icat in cats:
+				combine_command += " cat{}={}/card_rhalphabet_cat{}.txt".format(icat, card_directory, icat)
+			combine_command += " > {}/card_rhalphabet_N2CR.txt".format(card_directory)
+			os.system(combine_command)
+			#print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			#os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt > {}/card_rhalphabet_N2CR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+		elif options.region == "N2SR":
+			combine_command = "combineCards.py "
+			for icat in cats:
+				combine_command += " cat{}={}/card_rhalphabet_cat{}.txt".format(icat, card_directory, icat)
+			combine_command += " > {}/card_rhalphabet_nomuonCR.txt".format(card_directory)
+			print combine_command
+			os.system(combine_command)
+
+			#os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 		else:	
-			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
-			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+			combine_command = "combineCards.py "
+			for icat in cats:
+				combine_command += " cat{}={}/card_rhalphabet_cat{}.txt".format(icat, card_directory, icat)
+			combine_command += " muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt".format(card_directory, card_directory)
+			os.system(combine_command)
+
+			combine_command = "combineCards.py "
+			for icat in cats:
+				combine_command += " cat{}={}/card_rhalphabet_cat{}.txt".format(icat, card_directory, icat)
+			combine_command += " > {}/card_rhalphabet_nomuonCR.txt".format(card_directory)
+			os.system(combine_command)
+
+			#print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			#os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt muonCR={}/datacard_muonCR.txt > {}/card_rhalphabet_muonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 
 			# No muCR
-			print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
-			os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
+			#print 'combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory)
+			#os.system('combineCards.py cat1={}/card_rhalphabet_cat1.txt cat2={}/card_rhalphabet_cat2.txt  cat3={}/card_rhalphabet_cat3.txt cat4={}/card_rhalphabet_cat4.txt  cat5={}/card_rhalphabet_cat5.txt cat6={}/card_rhalphabet_cat6.txt  > {}/card_rhalphabet_nomuonCR.txt'.format(card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory, card_directory))
 
 ###############################################################
 

@@ -1,3 +1,4 @@
+
 import os
 import sys
 from ROOT import *
@@ -12,24 +13,32 @@ def reset(w, fr, exclude=None):
             w.var(p.GetName()).setError(p.getError())
     return True
 
-def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, signal_names=[], background_names=["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]):
+def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, signal_names=[], background_names=["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"], cats=[1,2,3,4,5,6], save_original=True):
     # Save copy of original workspaces
-    os.system("cp {} {}.original".format(base_path, base_path))
-    os.system("cp {} {}.original".format(rhalphabase_path, rhalphabase_path))
+    if save_original:
+        os.system("cp {} {}.original".format(base_path, base_path))
+        os.system("cp {} {}.original".format(rhalphabase_path, rhalphabase_path))
 
     print "\n\n*** PREFIT ***"
     fbase = TFile.Open(base_path, 'update')
     fbase.ls()
     fralphabase = TFile.Open(rhalphabase_path, 'update')
     fralphabase.ls()
-    categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6',
-                  'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
+    categories = []
+    for cat in cats:
+        categories.append("pass_cat{}".format(cat))
+        categories.append("fail_cat{}".format(cat))
+    #categories = ['pass_cat1', 'pass_cat2', 'pass_cat3', 'pass_cat4', 'pass_cat5', 'pass_cat6', 'fail_cat1', 'fail_cat2', 'fail_cat3', 'fail_cat4', 'fail_cat5', 'fail_cat6']
 
     wbase = {}
     wralphabase = {}
     for cat in categories:
         wbase[cat] = fbase.Get('w_%s' % cat)
+        if not wbase[cat]:
+            print "[prefit] ERROR : Workspace {} not found in file {}".format('w_%s' % cat, fbase.GetPath())
         wralphabase[cat] = fralphabase.Get('w_%s' % cat)
+        if not wbase[cat]:
+            print "[prefit] ERROR : Workspace {} not found in file {}".format('w_%s' % cat, fralphabase.GetPath())
         for parname, parval in fix_pars.iteritems():
             if wbase[cat].var(parname):
                 wbase[cat].var(parname).setVal(parval)
@@ -86,8 +95,8 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
                                                           'histpdf_%s_%s' % (proc, cat),
                                                           RooArgSet(wbase[cat].var('x')),
                                                           datahist['%s_%s' % (proc, cat)])
-            getattr(w, 'import')(datahist['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes())
-            getattr(w, 'import')(histpdf['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes())
+            getattr(w, 'import')(datahist['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes(), RooFit.Silence())
+            getattr(w, 'import')(histpdf['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes(), RooFit.Silence())
             if proc in signal_names:
                 # signal
                 signorm['%s_%s' % (proc, cat)] = RooRealVar('signorm_%s_%s' % (proc, cat),
@@ -95,7 +104,7 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
                                                               datahist['%s_%s' % (proc, cat)].sumEntries(),
                                                               0, 10. * datahist['%s_%s' % (proc, cat)].sumEntries())
                 signorm['%s_%s' % (proc, cat)].setConstant(True)
-                getattr(w, 'import')(signorm['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes())
+                getattr(w, 'import')(signorm['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes(), RooFit.Silence())
                 histpdfnorm['%s_%s' % (proc, cat)] = RooFormulaVar('histpdfnorm_%s_%s' % (proc, cat),
                                                                      '@0*@1', RooArgList(mu, signorm[
                         '%s_%s' % (proc, cat)]))
@@ -109,7 +118,7 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
                                                                   0, 10. * datahist[
                                                                       '%s_%s' % (proc, cat)].sumEntries())
                 histpdfnorm['%s_%s' % (proc, cat)].setConstant(True)
-                getattr(w, 'import')(histpdfnorm['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes())
+                getattr(w, 'import')(histpdfnorm['%s_%s' % (proc, cat)], RooFit.RecycleConflictNodes(), RooFit.Silence())
                 pdfs_b.add(histpdf['%s_%s' % (proc, cat)])
                 pdfs_s.add(histpdf['%s_%s' % (proc, cat)])
                 norms_b.add(histpdfnorm['%s_%s' % (proc, cat)])
@@ -118,8 +127,8 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
         epdf_b[cat] = RooAddPdf('epdf_b_' + cat, 'epdf_b_' + cat, pdfs_b, norms_b)
         epdf_s[cat] = RooAddPdf('epdf_s_' + cat, 'epdf_s_' + cat, pdfs_s, norms_s)
 
-        getattr(w, 'import')(epdf_b[cat], RooFit.RecycleConflictNodes())
-        getattr(w, 'import')(epdf_s[cat], RooFit.RecycleConflictNodes())
+        getattr(w, 'import')(epdf_b[cat], RooFit.RecycleConflictNodes(), RooFit.Silence())
+        getattr(w, 'import')(epdf_s[cat], RooFit.RecycleConflictNodes(), RooFit.Silence())
 
     ## arguments = ["data_obs","data_obs",RooArgList(x),rooCat]
 
@@ -147,9 +156,9 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
 
     mu.setVal(1.)
 
-    getattr(w, 'import')(simPdf_b, RooFit.RecycleConflictNodes())
-    getattr(w, 'import')(simPdf_s, RooFit.RecycleConflictNodes())
-    getattr(w, 'import')(combData, RooFit.RecycleConflictNodes())
+    getattr(w, 'import')(simPdf_b, RooFit.RecycleConflictNodes(), RooFit.Silence())
+    getattr(w, 'import')(simPdf_s, RooFit.RecycleConflictNodes(), RooFit.Silence())
+    getattr(w, 'import')(combData, RooFit.RecycleConflictNodes(), RooFit.Silence())
 
     simPdf_b = w.pdf('simPdf_b')
     simPdf_s = w.pdf('simPdf_s')
@@ -195,11 +204,13 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
                 wralphabase[cat].var(parname).setConstant(False)
         reset(wralphabase[cat], fr)
         if icat == 0:
+            print fr
             getattr(wralphabase[cat], 'import')(fr)
             wralphabase[cat].writeToFile(rhalphabase_path, True)
         else:
             wralphabase[cat].writeToFile(rhalphabase_path, False)
         icat += 1
+    print "[prefit] Done."
 
 if __name__ == "__main__":
     import argparse
@@ -209,7 +220,11 @@ if __name__ == "__main__":
     parser.add_argument("--fix_pars", type=str, help="Parameters in base.root to fix (syntax parname:parvalue,...)")
     parser.add_argument("--fix_pars_rhalphabet", type=str, help="Parameters in rhalphabase.root to fix")
     parser.add_argument("--signals", type=str, help="Signal names")
+    parser.add_argument("--cats", type=str, default="1,2,3,4,5,6", help="Category indices to include")
+    parser.add_argument("--no_backup_original", action="store_false", help="Don't save a copy of the original workspace (e.g. for condor jobs)")
     args = parser.parse_args()
+
+    cats = [int(x) for x in args.cats.split(",")]
 
     fix_pars = {}
     if args.fix_pars:
@@ -221,4 +236,4 @@ if __name__ == "__main__":
             print nameval
             fix_pars_rhalphabet[nameval[0]] = float(nameval[1])
 
-    prefit(args.base_path, args.rhalphabase_path, fix_pars=fix_pars, fix_pars_rhalphabet=fix_pars_rhalphabet, signal_names=args.signals.split(","))
+    prefit(args.base_path, args.rhalphabase_path, fix_pars=fix_pars, fix_pars_rhalphabet=fix_pars_rhalphabet, signal_names=args.signals.split(","), cats=cats, save_original=not args.no_backup_original)

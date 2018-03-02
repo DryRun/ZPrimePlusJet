@@ -12,11 +12,21 @@ import os
 import DAZSLE.ZPrimePlusJet.xbb_config as config
 from buildRhalphabetXbb import GetSF
 
+def zero_bins(hist, xmin, xmax):
+	new_hist = hist.Clone()
+	for xbin in xrange(1, hist.GetNbinsX()+1):
+		if new_hist.GetXaxis().GetBinCenter(xbin) < xmin or new_hist.GetXaxis().GetBinCenter(xbin) > xmax:
+			print "[debug] Zeroing bin [{}, {}]".format(new_hist.GetXaxis().GetBinLowEdge(), new_hist.GetXaxis().GetBinUpEdge())
+			new_hist.SetBinContent(xbin, 0.)
+			new_hist.SetBinError(xbin, 0.)
+	return new_hist
+
 # fake_signal: instead of loading the signal template, insert a fake template, gaussian with tiny normalization. Using this until we can come up with a good template.
 def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_path,decidata=False):
 	obsRate = {}
 	for box in boxes:
 		obsRate[box] = histograms['data_obs_%s'%box].Integral()
+		print "[debug] FDSA histogram data_obs_{} rate = {}".format(box, obsRate[box])
 	nBkgd = len(bkgs)
 	nSig = len(sigs)
 
@@ -40,6 +50,9 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 		for box in boxes:
 			process_name = "{}_{}".format(proc, box)
 			error = array.array('d',[0.0])
+			if "TH2" in histograms[process_name].IsA().GetName():
+				histograms[process_name + "_copy"] = histograms[process_name].Clone()
+				histograms[process_name] = histograms[process_name + "_copy"].ProjectionX()
 			rate = histograms[process_name].IntegralAndError(1,histograms[process_name].GetNbinsX(),error)
 			rates[process_name]  = rate
 			lumiErrs[process_name] = 1.025
@@ -273,6 +286,7 @@ def main(options, args):
 					print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name, this_file.GetPath())
 					sys.exit(1)
 				histograms[process_name] = this_file.Get(histogram_name).ProjectionX()
+				histograms[process_name] = zero_bins(histograms[process_name], 40, 600)
 				if not "data" in process_name:
 					histograms[process_name].Scale(GetSF(proc,box,options.jet_type,this_file, region="muCR"))
 				# Rename data histogram to data_obs_<pass|fail>. The muCR histograms come in named as data_singlemu_...
@@ -286,7 +300,8 @@ def main(options, args):
 							if not this_file.Get(process_name_syst):
 								print "[writeMuonCRDatacardXbb::main] ERROR : Can't load histogram {} from file {}".format(process_name_syst, this_file.GetPath())
 								sys.exit(1)
-							histograms[process_name_syst] = this_file.Get(process_name_syst)
+							histograms[process_name_syst] = this_file.Get(process_name_syst).ProjectionX()
+							histograms[process_name_syst] = zero_bins(histograms[process_name_syst], 40, 600)							
 							histograms[process_name_syst].Scale(GetSF(proc,box,options.jet_type,this_file, region="muCR"))
 
 		if options.fake_signal:
@@ -304,9 +319,10 @@ def main(options, args):
 						# Histogram is a TH2 (1 bin on y-axis). Need to FillRandom to TH1.
 						this_th1 = histograms[process_name].ProjectionX()
 						this_th1.FillRandom("mygaus", 1000)
-						for bin in xrange(1, this_th1.GetNbinsX()+1):
-							histograms[process_name].SetBinContent(bin, 1, this_th1.GetBinContent(bin))
-							histograms[process_name].SetBinError(bin, 1, this_th1.GetBinError(bin))
+						for xbin in xrange(1, this_th1.GetNbinsX()+1):
+							for ybin in xrange(histograms[process_name].GetNbinsY()+1):
+								histograms[process_name].SetBinContent(xbin, ybin, this_th1.GetBinContent(xbin))
+								histograms[process_name].SetBinError(xbin, ybin, this_th1.GetBinError(xbin))
 					elif "TH1" in histograms[process_name].IsA().GetName():
 						# Histogram in a TH1, can use FillRandom directly
 						print "FillRandom, TH1 version, for {}".format(histograms[process_name].GetName())
@@ -334,9 +350,10 @@ def main(options, args):
 								# Histogram is a TH2 (1 bin on y-axis). Need to FillRandom to TH1.
 								this_th1 = histograms[process_name_syst].ProjectionX()
 								this_th1.FillRandom("mygaus", 1000)
-								for bin in xrange(1, this_th1.GetNbinsX()+1):
-									histograms[process_name_syst].SetBinContent(bin, 1, this_th1.GetBinContent(bin))
-									histograms[process_name_syst].SetBinError(bin, 1, this_th1.GetBinError(bin))
+								for xbin in xrange(1, this_th1.GetNbinsX()+1):
+									for ybin in xrange(1, histograms[process_name_syst].GetNbinsY()+1):
+										histograms[process_name_syst].SetBinContent(xbin, ybin, this_th1.GetBinContent(xbin))
+										histograms[process_name_syst].SetBinError(xbin, ybin, this_th1.GetBinError(xbin))
 							elif "TH1" in histograms[process_name_syst].IsA().GetName():
 								# Histogram in a TH1, can use FillRandom directly
 								print "FillRandom, TH1 version, for {}".format(histograms[process_name_syst].GetName())
@@ -368,15 +385,22 @@ def main(options, args):
 		w = RooWorkspace('w_muonCR')
 		#w.factory('y[40,40,201]')
 		#w.var('y').setBins(1)
-		w.factory('x[%i,%i,%i]'%(config.analysis_parameters[options.jet_type]["MSD"][0], config.analysis_parameters[options.jet_type]["MSD"][0],config.analysis_parameters[options.jet_type]["MSD"][1]))
-		w.var('x').setBins(config.analysis_parameters[options.jet_type]["MASS_BINS"])
+		w.factory('x[%i,%i,%i]'%(40, 40, 600))
+		w.var('x').setBins(80)
 		for key, histo in histograms.iteritems():
 			#histo.Rebin(23)
 			#ds = RooDataHist(key,key,RooArgList(w.var('y')),histo)
+			if "TH2" in histo.IsA().GetName():
+				histo1D = histo.ProjectionX()
+			else:
+				histo1D = histo
 			print "\n[debug] Saving key {} to workspace".format(key)
 			print "[debug]\tHistogram: ",
-			histo.Print()
-			ds = RooDataHist(key,key,RooArgList(w.var('x')),histo)
+			histo1D.Print()
+			if "data_obs" in key:
+				print "[debug]\tASDF histo {} integral = {}".format(key, histo1D.Integral())
+			ds = RooDataHist(key,key,RooArgList(w.var('x')),histo1D)
+			print "[debug] \tIntegral = {}".format(ds.sum(False))
 			getattr(w,'import')(ds, RooCmdArg())
 		w.Write()
 		outputFile.Close()

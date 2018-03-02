@@ -115,7 +115,7 @@ def GetSF_muCR(process, cat, jet_type, f, fLoose=None, removeUnmatched=False, iP
     return GetSF_SR(process, cat, jet_type, f, fLoose=fLoose, removeUnmatched=removeUnmatched, iPt=iPt)
 
 
-# Load histograms here, rather than rhalphabet_builder.LoadHistograms. I think it's unreasonable to expect that different analyses will share this function!
+# Load histograms here, rather than rhalphabet_builder.LoadHistograms. I think it's unreasonable to expect that different analyses will share this function.
 # input_file_path = path of TFile containing the pass/fail msd-pT histograms
 # mass_range      = range of mSD to use
 # rho_range       = range of rho to use
@@ -353,6 +353,9 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
             elif 'Sbb' in process:
                 re_match = re_sbb.search(process)
                 mass = int(re_match.group("mass"))
+            else:
+                print "Unrecognized process in scale/shift: {}".format(process)
+                sys.exit(1)
 
             # Start from the existing central value histograms
             # - Note: this code assumes that the histograms are already V-matched, and that we're ignoring the unmatched part
@@ -482,6 +485,7 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     # Postprocessing:
     # - Blind signal bins, if requested
     # - Set bins outside the desired rho range to zero
+    # - Set bins outside the mSD range to zero
     # - SetDirectory(0)
     for histogram in (pass_hists.values() + fail_hists.values()):
         for i in range(1,histogram.GetNbinsX()+1):
@@ -499,6 +503,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                     #    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
                     #    histogram.GetYaxis().GetBinUpEdge(j),
                     #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
+                    histogram.SetBinContent(i, j, 0.)
+                if massVal < config.analysis_parameters[jet_type]["MSD"][0] or massVal > config.analysis_parameters[jet_type]["MSD"][1]:
                     histogram.SetBinContent(i, j, 0.)
                 if min_mass >= 0.:
                     if massVal < min_mass:
@@ -525,6 +531,8 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                                 #    histogram.GetYaxis().GetBinUpEdge(j),
                                 #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                                 histogram.SetBinContent(i, j, 0.)
+                            if massVal < config.analysis_parameters[jet_type]["MSD"][0] or massVal > config.analysis_parameters[jet_type]["MSD"][1]:
+                                histogram.SetBinContent(i, j, 0.)
                             if min_mass >= 0.:
                                 if massVal < min_mass:
                                     histogram.SetBinContent(i, j, 0.)
@@ -548,7 +556,8 @@ def main(options, args):
     # 	- for each MC sample and the data
     (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
 
-    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
+    # MSD bins: restricted=mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], full = 80, 40, 600
+    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=80, mass_lo=40., mass_hi=600., rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
     rhalphabuilder.run()
     if options.addHptShape:
@@ -561,7 +570,7 @@ def main(options, args):
                 if irho ==0 and ipt == 0:
                     continue
                 fix_pars_rhalphabet["r{}p{}".format(irho, ipt)] = 0.
-        rhalphabuilder.prefit(fix_pars_rhalphabet=fix_pars_rhalphabet)
+        rhalphabuilder.prefit(fix_pars_rhalphabet=fix_pars_rhalphabet, category_indices=config.analysis_parameters[options.jet_type]["FIT_PT_BINS"])
 
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
@@ -569,7 +578,9 @@ def main(options, args):
         #print "cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
         #os.system("cp {}/base.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
         #os.system("cp {}/rhalphabase.root {}".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
-        print "ln -s {}/base.root {}/base.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
+        os.system("mv {}/base.root {}/base.root.old".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region), config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        os.system("mv {}/rhalphabase.root {}/rhalphabase.root.old".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region), config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
+        print "ln -s {}/base.root {}/base.root".format(config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region), config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region))
         os.system("ln -s {}/base.root {}/base.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
         os.system("ln -s {}/rhalphabase.root {}/rhalphabase.root".format(odir, config.get_datacard_directory(signal_name, options.jet_type, qcd=options.pseudo, decidata=options.decidata, region=options.region)))
 

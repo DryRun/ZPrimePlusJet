@@ -20,12 +20,14 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 	working_directory = config.get_limit_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region)
 	os.system("mkdir -pv {}".format(working_directory))
 	cwd = os.getcwd()
-	os.chdir(datacard_directory)
+	os.chdir(working_directory)
 	input_files = ["{}/base.root".format(datacard_directory), "{}/rhalphabase.root".format(datacard_directory), "{}/{}".format(datacard_directory, card_name)]
+	if region == "SR" or region == "muCR":
+		input_files.append("{}/workspace_muonCR.root".format(datacard_directory))
 
 	# Run script
 	job_name = "combine_{}_{}_{}_{}_r{}p{}".format(signal_name, jet_type, method, region, nrho, npt)
-	run_script_path = "{}/run_combine_{}.sh".format(datacard_directory, job_name)
+	run_script_path = "{}/run_combine_{}.sh".format(working_directory, job_name)
 	run_script = open(run_script_path, 'w')
 	run_script.write("#!/bin/bash\n")
 	run_script.write("cp {} tmpcard.txt\n".format(card_name))
@@ -40,9 +42,9 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 				if irho > nrho or ipt > npt:
 					prefit_fix_pars_str += "r{}p{}:0,".format(irho, ipt)
 		prefit_fix_pars_str = prefit_fix_pars_str[:-1] # Chop trailing comma
-		run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {}\n".format(prefit_fix_pars_str, signal_name))
+		run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {} --cats {} --no_backup_original\n".format(prefit_fix_pars_str, signal_name, ",".join([str(x) for x in config.analysis_parameters[jet_type]["FIT_PT_BINS"]])))
 
-	combine_command = "combine -M {} -v {} -t -1 --toysFreq tmpcard.txt -n {}".format(method, verbose, job_name)
+	combine_command = "combine -M {} -v {} tmpcard.txt -n {}".format(method, verbose, job_name) # -t -1 --toysFreq
 	if method == "Asymptotic":
 		combine_command += " --saveWorkspace"
 	elif method == "MaxLikelihoodFit":
@@ -54,7 +56,7 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 				freeze_string += "r{}p{},".format(irho, ipt)
 	freeze_string = freeze_string[:-1]
 	combine_command += freeze_string
-	combine_command += " 2>&1"
+	combine_command += " 2>&1 | tee log_{}.txt".format(job_name)
 	run_script.write(combine_command + "\n")
 
 	# Prepare return objects
@@ -67,7 +69,8 @@ def csub_combine(signal_name, jet_type, method="Asymptotic", region="SR", decida
 	print combine_command
 
 	# csub script
-	csub_script_path = "{}/csub_{}.sh".format(datacard_directory, job_name)
+	csub_script_path = "{}/csub_{}.sh".format(working_directory, job_name)
+	print csub_script_path
 	csub_script = open(csub_script_path, 'w')
 	csub_script.write("#!/bin/bash\n")
 	csub_command = "csub {} -F {} --cmssw --no_retar ".format(run_script_path, ",".join(input_files))
@@ -92,7 +95,7 @@ if __name__ == "__main__":
 	parser.add_argument("--verbose", type=int, default="0", help="Combine verbosity")
 	parser.add_argument("--nrho", type=int, help="Polynomial degree in rho")
 	parser.add_argument("--npt", type=int, help="Polynomial degree in pt")
-	parser.add_argument("--prefit", action="store_true", help="Prefit the workspace")
+	#parser.add_argument("--prefit", action="store_true", help="Prefit the workspace") # Prefit should always be true, otherwise you get nonzero poly parameters!
 	args = parser.parse_args()
 
 	if args.signals == "all":
@@ -118,5 +121,5 @@ if __name__ == "__main__":
 						npt = args.npt
 					else:
 						npt = config.analysis_parameters[jet_type]["DEFAULT_NPT"]
-					csub_combine(signal_name, jet_type, method=method, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=nrho, npt=npt, prefit=args.prefit)
+					csub_combine(signal_name, jet_type, method=method, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=nrho, npt=npt, prefit=True)
 
