@@ -14,7 +14,7 @@ import DAZSLE.ZPrimePlusJet.xbb_config as config
 seaborn = Root.SeabornInterface()
 seaborn.Initialize()
 
-def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decidata=False, logy=False):
+def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decidata=False, logy=False, muonCR=False):
 	print "[fitb_plot] DEBUG : Getting data histogram from {}".format(config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region) + "/base.root")
 	data_file = TFile(config.get_datacard_directory(signal_name, jet_type, qcd=pseudodata, decidata=decidata, region=region) + "/base.root", "READ")
 	# mlfit plots file = e.g. ~/DAZSLE/data/LimitSetting/Xbb_inputs/N2CR_CA15/cards_mcstat/Sbb125/plots_combine_Sbb125_CA15_MaxLikelihoodFit_N2CR_r5p1/mlfitcombine_Sbb125_CA15_MaxLikelihoodFit_N2CR_r5p1.root
@@ -31,7 +31,10 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 	if not fit_file.IsOpen():
 		print "[fitb_plot] ERROR : Couldn't open file {}".format(fit_file.GetPath())
 		return -1
-	for cat in config.analysis_parameters[jet_type]["FIT_PT_BINS"]:
+	cats = config.analysis_parameters[jet_type]["FIT_PT_BINS"]
+	if muonCR:
+		cats.append("muCR")
+	for cat in cats:
 		for what in ["pass", "fail"]:
 			cname = "c_msdfitb_{}_cat{}_{}_{}_{}_{}".format(what, cat, jet_type, region, nrho, npt)
 			w_data = data_file.Get("w_{}_cat{}".format(what, cat))

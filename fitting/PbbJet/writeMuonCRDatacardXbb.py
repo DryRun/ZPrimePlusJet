@@ -245,8 +245,8 @@ def writeDataCard(boxes,workspace_path,sigs,bkgs,histograms,options,datacard_pat
 	
 def main(options, args):
 	boxes = ['pass', 'fail']
-	#bkgs = ['zqq','wqq','qcd','tqq','vvqq','stqq','wlnu','zll', "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
-	bkgs = ['qcd', 'tqq']
+	bkgs = ['zqq','wqq','qcd','tqq','vvqq','stqq','wlnu','zll', "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]
+	#bkgs = ['tqq']
 	datas = ["data_obs"]
 
 	for signal_name in config.limit_signal_names[options.jet_type]:
