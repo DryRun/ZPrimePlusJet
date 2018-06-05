@@ -212,7 +212,7 @@ def main(options,args):
 					newline = bbString
 				elif 'veff' in l:
 					newline = vString
-				elif "scale" in l and i>1:
+				elif "scalept" in l and i>1:
 					newline = scaleptString
 				elif 'TQQEFF' in l:
 					if (histograms['tqq_pass'].Integral() + histograms['tqq_fail'].Integral()) > 0:
@@ -287,6 +287,8 @@ def main(options,args):
 		# Combine category cards
 		card_directory = config.get_datacard_directory(signal_name, options.jet_type, qcd=options.qcd, decidata=options.decidata, region=options.region)
 		cats = config.analysis_parameters[options.jet_type]["FIT_PT_BINS"]
+		#if options.region == "N2SR" and options.jet_type == "CA15":
+		#	cats = [1,2,3,4,5,6]
 		#ncats = len(config.analysis_parameters[options.jet_type]["PT_BINS"]) - 1
 		if options.region == "N2CR":
 			combine_command = "combineCards.py "

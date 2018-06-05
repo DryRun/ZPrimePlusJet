@@ -13,7 +13,7 @@ def reset(w, fr, exclude=None):
             w.var(p.GetName()).setError(p.getError())
     return True
 
-def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, signal_names=[], background_names=["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"], cats=[1,2,3,4,5,6], save_original=True):
+def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, zero_pars_rhalphabet=[], signal_names=[], background_names=["wqq", "zqq", "qcd", "tqq", "hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"], cats=[1,2,3,4,5,6], save_original=True):
     # Save copy of original workspaces
     if save_original:
         os.system("cp {} {}.original".format(base_path, base_path))
@@ -46,12 +46,18 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
             else:
                 print "[rhalphabet_builder::prefit] WARNING : parameter {} doesn't exist, ignoring".format(parname)
 
-        for parname, parval in fix_pars_rhalphabet.iteritems():
-            if wralphabase[cat].var(parname):
-                wralphabase[cat].var(parname).setVal(parval)
-                wralphabase[cat].var(parname).setConstant(True)
-            else:
-                print "[rhalphabet_builder::prefit] WARNING : parameter {} doesn't exist in workspace {}, ignoring".format(parname, 'w_%s' % cat)
+        if "pass" in cat:
+            for parname, parval in fix_pars_rhalphabet.iteritems():
+                if wralphabase[cat].var(parname):
+                    wralphabase[cat].var(parname).setVal(parval)
+                    wralphabase[cat].var(parname).setConstant(True)
+                else:
+                    print "[rhalphabet_builder::prefit] WARNING : parameter {} doesn't exist in workspace {}, ignoring".format(parname, 'w_%s' % cat)
+
+            # Set remaining rhalphabet parameters to zero
+            for parname in zero_pars_rhalphabet:
+                if wralphabase[cat].var(parname):
+                    wralphabase[cat].var(parname).setVal(0.)
 
     w = RooWorkspace('w')
     w.factory('mu[1.,0.,20.]')
@@ -181,16 +187,29 @@ def prefit(base_path, rhalphabase_path, fix_pars={}, fix_pars_rhalphabet={}, sig
 
     nll = simPdf_s.createNLL(combData)
     m2 = RooMinimizer(nll)
+    #m2.setVerbose(True)
     m2.setStrategy(2)
-    m2.setMaxFunctionCalls(100000)
-    m2.setMaxIterations(100000)
-    m2.setPrintLevel(-1)
-    m2.setPrintEvalErrors(-1)
-    m2.setEps(1e-5)
+    m2.setMaxFunctionCalls(1000000)
+    m2.setMaxIterations(1000000)
+    #m2.setPrintLevel(-1)
+    #m2.setPrintEvalErrors(-1)
+    #m2.setEps(1e-2)
     m2.optimizeConst(2)
+    m2.setOffsetting(True)
+
+    # Try to set edm to 1e-2
+    opts = m2.fitter().Config().MinimizerOptions()
+    opts.SetTolerance(1.e-2)
+    m2.fitter().Config().SetMinimizerOptions(opts)
+    #SetMinimizerOptions(opt);
+
+    #m2.fitter().Config().MinimizerOptions().SetTolerance(1.e-2)
+
 
     migrad_status = m2.minimize('Minuit2', 'migrad')
+    #m2.setEps(1e-2)
     improve_status = m2.minimize('Minuit2', 'improve')
+    #m2.setEps(1e-2)
     hesse_status = m2.minimize('Minuit2', 'hesse')
     fr = m2.save()
 
@@ -219,6 +238,7 @@ if __name__ == "__main__":
     parser.add_argument("--rhalphabase_path", type=str, help="Path to rhalphabase.root")
     parser.add_argument("--fix_pars", type=str, help="Parameters in base.root to fix (syntax parname:parvalue,...)")
     parser.add_argument("--fix_pars_rhalphabet", type=str, help="Parameters in rhalphabase.root to fix")
+    parser.add_argument("--zero_pars_rhalphabet", type=str, help="Parameters in rhalphabase.root to zero")
     parser.add_argument("--signals", type=str, help="Signal names")
     parser.add_argument("--cats", type=str, default="1,2,3,4,5,6", help="Category indices to include")
     parser.add_argument("--no_backup_original", action="store_false", help="Don't save a copy of the original workspace (e.g. for condor jobs)")
@@ -235,5 +255,8 @@ if __name__ == "__main__":
         for nameval in [x.split(":") for x in args.fix_pars_rhalphabet.split(",")]:
             print nameval
             fix_pars_rhalphabet[nameval[0]] = float(nameval[1])
+    zero_pars_rhalphabet = []
+    if args.zero_pars_rhalphabet:
+        zero_pars_rhalphabet = args.zero_pars_rhalphabet.split(",")
 
-    prefit(args.base_path, args.rhalphabase_path, fix_pars=fix_pars, fix_pars_rhalphabet=fix_pars_rhalphabet, signal_names=args.signals.split(","), cats=cats, save_original=not args.no_backup_original)
+    prefit(args.base_path, args.rhalphabase_path, fix_pars=fix_pars, fix_pars_rhalphabet=fix_pars_rhalphabet, zero_pars_rhalphabet=zero_pars_rhalphabet, signal_names=args.signals.split(","), cats=cats, save_original=not args.no_backup_original)

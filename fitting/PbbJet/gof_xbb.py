@@ -12,7 +12,7 @@ import DAZSLE.ZPrimePlusJet.xbb_config as config
 
 gof_directory = "/uscms/home/dryu/DAZSLE/data/Fits/gof/"
 
-def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region="SR", muonCR=True, decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1, freeze_nuisances=None, fixed_signal_strength=None, ntoys=500, toys_per_job=10, condor=True):
+def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region="SR", muonCR=True, decidata=False, pseudodata=False, card_name=None, verbose=0, nrho=2, npt=1, freeze_nuisances=None, fixed_signal_strength=None, ntoys=500, toys_per_job=10, condor=True, freeze_groups=None):
 	if not card_name:
 		# Infer card name automatically
 		if region == "SR":
@@ -64,7 +64,10 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 			if irho > nrho or ipt > npt:
 				prefit_fix_pars_str += "r{}p{}:0,".format(irho, ipt)
 	prefit_fix_pars_str = prefit_fix_pars_str[:-1] # Chop trailing comma
-	run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {} --cats {} --no_backup_original  2>&1 | tee log_prefit_{}.txt\n".format(prefit_fix_pars_str, signal_name, ",".join([str(x) for x in config.analysis_parameters[jet_type]["FIT_PT_BINS"]]), job_name))
+	cats = config.analysis_parameters[jet_type]["FIT_PT_BINS"]
+	#if jet_type == "CA15" and region == "N2SR":
+	#	cats = [1,2,3,4,5,6]
+	run_script.write("python $CMSSW_BASE/python/DAZSLE/ZPrimePlusJet/prefit_workspace.py --base_path base.root --rhalphabase_path rhalphabase.root --fix_pars_rhalphabet {} --signals {} --cats {} --no_backup_original  2>&1 | tee log_prefit_{}.txt\n".format(prefit_fix_pars_str, signal_name, ",".join([str(x) for x in cats]), job_name))
 
 	# String for freezing nuisance parameters. Both manually specified and extra polnomial terms.
 	frozen_nps = []
@@ -82,6 +85,11 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	else:
 		freeze_string = ""
 
+	if freeze_groups:
+		freeze_groups_string = " --freezeNuisanceGroups " + ",".join(freeze_groups)
+	else:
+		freeze_groups_string = ""
+
 	# String for fixing signal strength
 	if fixed_signal_strength != None:
 		fixed_signal_strength_string = " --fixedSignalStrength {}".format(fixed_signal_strength)
@@ -95,6 +103,7 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	run_script.write("\tmkdir plots\n")
 	command_mlf = "combine -M MaxLikelihoodFit -v 0 tmpcard.txt -n {}_mlfit  --saveNormalizations --plot --saveShapes --saveWorkspace --out plots ".format(job_name + "_maxlikelihoodfit")
 	command_mlf += freeze_string
+	command_mlf += freeze_groups_string
 	run_script.write("\t" + command_mlf + " 2>&1 | tee log_mlfit_{}.txt\n".format(job_name))
 	run_script.write("\ttar -czvf plots.tar.gz plots\n")
 
@@ -102,6 +111,7 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	for algorithm in algorithms:
 		command_centralgof = "combine -M GoodnessOfFit --algorithm {} --rMax 20 --rMin -20 -v {} tmpcard.txt -n {}".format(algorithm, verbose, job_name + "_" + algorithm)
 		command_centralgof += freeze_string
+		command_centralgof += freeze_groups_string
 		command_centralgof += fixed_signal_strength_string
 		run_script.write("\t" + command_centralgof + " 2>&1 | tee log_gof_central_{}_{}.txt\n".format(job_name, algorithm))
 
@@ -110,12 +120,14 @@ def run_gof(signal_name, jet_type, algorithms=["saturated", "KS", "AD"], region=
 	# GoF toys, for p0 value
 	command_gentoys = "combine -M GenerateOnly tmpcard.txt --rMax 20 --rMin -20 --toysFrequentist -t {} --expectSignal 0 --saveToys -n {} --seed $1".format(toys_per_job, job_name + "_gentoys_subjob$1")
 	command_gentoys += freeze_string
+	command_gentoys += freeze_groups_string
 	run_script.write(command_gentoys + " 2>&1\n")
 	toys_filename = "higgsCombine{}.GenerateOnly.mH120.$1.root".format(job_name + "_gentoys_subjob$1")
 
 	for algorithm in algorithms:
 		command_goftoys = "combine tmpcard.txt -M GoodnessOfFit --algorithm {} --rMax 20 --rMin -20 -t {} --toysFile {} -n {} --seed $1".format(algorithm, toys_per_job, toys_filename, job_name + "_" + algorithm + "_toysfit" + "_subjob$1")
 		command_goftoys += freeze_string
+		command_goftoys += freeze_groups_string
 		command_goftoys += fixed_signal_strength_string
 		run_script.write(command_goftoys + "  2>&1 | tee log_gof_toys$1_{}_{}.txt\n".format(job_name, algorithm))
 
@@ -263,6 +275,8 @@ if __name__ == "__main__":
 	parser.add_argument("--run", action="store_true", help="Run jobs on condor")
 	parser.add_argument("--condor_run", action="store_true", help="Run jobs on condor")
 	parser.add_argument("--pval", action="store_true", help="Get results and make p value figures")
+	parser.add_argument("--freeze_nuisances", type=str, help="Freeze nuisance parameters")
+	parser.add_argument("--freeze_groups", type=str, help="Freeze nuisance parameters")
 	args = parser.parse_args()
 
 	if args.signals == "all":
@@ -290,12 +304,21 @@ if __name__ == "__main__":
 			npt = int(poly_degree_string.split(":")[1])
 			poly_degrees[jet_type].append((nrho, npt))
 
+	if args.freeze_nuisances:
+		freeze_nuisances = args.freeze_nuisances.split(",")
+	else:
+		freeze_nuisances = None
+	if args.freeze_groups:
+		freeze_groups = args.freeze_groups.split(",")
+	else:
+		freeze_groups = None
+
 	if args.run or args.condor_run:
 		for region in args.regions.split(","):
 			for jet_type in args.jet_types.split(","):
 				for signal_name in signal_names[jet_type]:
 					for poly_degree in poly_degrees[jet_type]:
-						run_gof(signal_name, jet_type, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=poly_degree[0], npt=poly_degree[1], fixed_signal_strength=args.fixed_signal_strength, muonCR=args.nomuonCR, ntoys=args.ntoys, toys_per_job=args.toys_per_job, condor=args.condor_run)
+						run_gof(signal_name, jet_type, region=region, decidata=args.decidata, pseudodata=args.pseudodata, verbose=args.verbose, nrho=poly_degree[0], npt=poly_degree[1], fixed_signal_strength=args.fixed_signal_strength, muonCR=args.nomuonCR, ntoys=args.ntoys, toys_per_job=args.toys_per_job, condor=args.condor_run, freeze_nuisances=freeze_nuisances, freeze_groups=freeze_groups)
 	elif args.pval:
 		for region in args.regions.split(","):
 			for jet_type in args.jet_types.split(","):

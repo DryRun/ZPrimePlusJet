@@ -1,14 +1,20 @@
-python signal_interpolations.py --interpolate --jet_type AK8 --output_range 50,525,25
-python signal_interpolations.py --interpolate --jet_type CA15 --output_range 50,525,25
-python signal_interpolations.py --interpolate_muCR --jet_type AK8 --output_range 50,525,25
-python signal_interpolations.py --interpolate_muCR --jet_type CA15 --output_range 50,525,25
+python signal_interpolations.py --interpolate --jet_type AK8 --output_range 50,505,5
+python signal_interpolations.py --interpolate --jet_type CA15 --output_range 50,505,5
+python signal_interpolations.py --interpolate_muCR --jet_type AK8 --output_range 50,525,5
+python signal_interpolations.py --interpolate_muCR --jet_type CA15 --output_range 50,525,5
 
-python signal_interpolations.py --validate 100 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
-python signal_interpolations.py --validate 125 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
-python signal_interpolations.py --validate 125 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
-python signal_interpolations.py --validate 200 --models Sbb,PSbb --jet_type AK8 --output_range 50,325,25
-python signal_interpolations.py --validate 200 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
-python signal_interpolations.py --validate 350 --models Sbb,PSbb --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 100 --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 125 --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 200 --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 200 --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 250 --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 250 --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 300 --jet_type AK8 --output_range 50,325,25
+python signal_interpolations.py --validate 300 --jet_type CA15 --output_range 50,425,25
+python signal_interpolations.py --validate 350 --jet_type CA15 --output_range 50,425,25
+cat peakdata_*_pass_Sbb*txt > peakdata_pass_Sbb.txt
+cat peakdata_*_fail_Sbb*txt > peakdata_fail_Sbb.txt
 
 python signal_interpolations.py --validate 100 --models ZPrime --jet_type AK8 --output_range 50,325,25
 python signal_interpolations.py --validate 125 --models ZPrime --jet_type AK8 --output_range 50,325,25

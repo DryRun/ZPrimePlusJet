@@ -3,7 +3,6 @@ import os
 analysis_parameters = {}
 # Note: PT_BINS = bins used to create 2D histograms in event_selection_histograms.py
 # FIT_PT_BINS = bin indices to use in fit.
-# 
 analysis_parameters["AK8"] = {
 	"MASS_BINS":80,
 	"MSD":[40, 600],
@@ -24,6 +23,10 @@ analysis_parameters["AK8"] = {
 	"DEFAULT_NPT":1,
 	"VFAIL_SF":1.025,
 	"VFAIL_SF_ERR":0.043,
+	"MASS_SF":1.001,
+	"MASS_SF_ERR":0.004,
+	"RES_SF":1.084,
+	"RES_SF_ERR":0.09,
 }
 analysis_parameters["CA15"] = {
 	"MASS_BINS":74,
@@ -35,8 +38,8 @@ analysis_parameters["CA15"] = {
 	"N2DDT":0.,
 	"PT_BINS":[450.,500.,550.,600.,675.,800.,1000.],
 	"FIT_PT_BINS":[2,3,4,5,6],
-	"BB_SF":1.0,
-	"BB_SF_ERR":0.04,
+	"BB_SF":0.86,
+	"BB_SF_ERR":0.07,
 	"V_SF":0.968,
 	"V_SF_ERR":0.058,
 	"MAX_NRHO":6,
@@ -45,6 +48,10 @@ analysis_parameters["CA15"] = {
 	"DEFAULT_NPT":1,
 	"VFAIL_SF":1.0628742515,
 	"VFAIL_SF_ERR":0.058,
+	"MASS_SF":1.001,
+	"MASS_SF_ERR":0.009,
+	"RES_SF":0.988,
+	"RES_SF_ERR":0.079,
 }
 
 # Signal sample bookkeeping

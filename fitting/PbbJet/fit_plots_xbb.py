@@ -32,6 +32,8 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 		print "[fitb_plot] ERROR : Couldn't open file {}".format(fit_file.GetPath())
 		return -1
 	cats = config.analysis_parameters[jet_type]["FIT_PT_BINS"]
+	#if jet_type == "CA15" and region == "N2SR":
+	#	cats = [1,2,3,4,5,6]
 	if muonCR:
 		cats.append("muCR")
 	for cat in cats:
@@ -59,6 +61,7 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 					continue
 				if key.GetName() == "total_background":
 					total_background_hist = key.ReadObj()
+					print "[debug] total_background_hist (bin, xmin, xmax) = ({}, {}, {})".format(total_background_hist.GetNbinsX(), total_background_hist.GetXaxis().GetXmin(), total_background_hist.GetXaxis().GetXmax())
 				elif key.GetName() in ["total", "total_signal", "total_covar"] or "Sbb" in key.GetName():
 					continue
 				elif key.GetName() in ["hqq125","tthqq125","vbfhqq125","whqq125","zhqq125"]:
@@ -104,6 +107,7 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 
 			background_list = sorted(background_hists.keys(), key=lambda x: background_hists[x].Integral())
 			background_stack = THStack("bkgd_stack_{}".format(cname), "bkgd_stack")
+			test_sumhist = None
 			for background in background_list:
 				print "[debug] Background {} has bins {}, {}, {}".format(background, background_hists[background].GetNbinsX(), background_hists[background].GetXaxis().GetXmin(), background_hists[background].GetXaxis().GetXmax())
 				background_hists[background].SetFillStyle(1001)
@@ -111,6 +115,12 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 				background_hists[background].SetLineColor(1)
 				#print "[debug] Adding {} to the stack now".format(background)
 				background_stack.Add(background_hists[background])
+				if not test_sumhist:
+					print "[debug] Making test_sumhist from {}. (bins, xmin, xmax)=({}, {}, {})".format(background, background_hists[background].GetNbinsX(), background_hists[background].GetXaxis().GetXmin(), background_hists[background].GetXaxis().GetXmax())
+					test_sumhist = background_hists[background].Clone()
+				else:
+					print "[debug] Adding {} to test_sumhist (bins, xmin, xmax)=({}, {}, {})".format(background, background_hists[background].GetNbinsX(), background_hists[background].GetXaxis().GetXmin(), background_hists[background].GetXaxis().GetXmax())
+					test_sumhist.Add(background_hists[background])
 				#print "[debug]\t...done."
 			#print "[debug] Drawing background stack..."
 			background_stack.Draw("hist same")
@@ -173,6 +183,8 @@ def fitb_plots(signal_name, jet_type, region, nrho, npt, pseudodata=False, decid
 			SetOwnership(bottom, False)
 			SetOwnership(c, False)
 			total_background_hist.IsA().Destructor(total_background_hist)
+
+			c.IsA().Destructor(c)
 	return 0
 
 if __name__ == "__main__":
@@ -190,7 +202,7 @@ if __name__ == "__main__":
 	poly_degrees_strings = {}
 	if args.poly_degrees == "":
 		poly_degrees_strings["AK8"] = "2:1,3:1,2:2"
-		poly_degrees_strings["CA15"] = "2:1,3:1,4:1,5:1,6:1,4:2,5:2,1:3,2:3,3:3,4:3"
+		poly_degrees_strings["CA15"] = "2:1,3:1,4:1,5:1,6:1,2:2,3:2,4:2,5:2,1:3,2:3,3:3,4:3"
 	else:
 		poly_degrees_strings["AK8"] = args.poly_degrees
 		poly_degrees_strings["CA15"] = args.poly_degrees

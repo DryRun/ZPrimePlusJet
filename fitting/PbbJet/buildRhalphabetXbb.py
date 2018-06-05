@@ -320,19 +320,11 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
     if do_shift:
         all_systematics.append("scalept")
         all_systematics.append("smear")
-        m_data = 82.657
-        m_data_err = 0.313
-        m_mc = 82.548
-        m_mc_err = 0.191
-        s_data = 8.701
-        s_data_err = 0.433
-        s_mc = 8.027
-        s_mc_err = 0.607
-        mass_shift = m_data / m_mc
-        mass_shift_unc = math.sqrt((m_data_err / m_data)**2 + (m_mc_err / m_mc)**2) * 10.  # (10 sigma shift)
-        res_shift = s_data / s_mc
-        res_shift_unc = math.sqrt((s_data_err / s_data) * (s_data_err / s_data) + (s_mc_err / s_mc) * (
-            s_mc_err / s_mc)) * 2.  # (2 sigma shift)
+
+        mass_shift = config.analysis_parameters[jet_type]["MASS_SF"]
+        mass_shift_unc = config.analysis_parameters[jet_type]["MASS_SF_ERR"] * 10.# (10 sigma shift) 
+        res_shift = config.analysis_parameters[jet_type]["RES_SF"]
+        res_shift_unc = config.analysis_parameters[jet_type]["RES_SF_ERR"] * 2.  # (2 sigma shift)
 
         pass_hists_syst["scaleptUp"] = {}
         pass_hists_syst["scaleptDown"] = {}
@@ -498,17 +490,28 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                         print "blinding signal region for %s, mass bin [%i,%i] " % (
                         histogram.GetName(), histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                         histogram.SetBinContent(i, j, 0.)
+                        histogram.SetBinError(i, j, 0.)
                 if rhoVal < rho_range[0] or rhoVal > rho_range[1]:
                     #print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
                     #    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
                     #    histogram.GetYaxis().GetBinUpEdge(j),
                     #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
+                    if "data_obs" in histogram.GetName():
+                        print "[debug] ZERO: Setting hist {}, bin mSD={}/rho={}/pt={} to zero because of rho cut".format(histogram.GetName(), massVal, rhoVal, ptVal)
                     histogram.SetBinContent(i, j, 0.)
-                if massVal < config.analysis_parameters[jet_type]["MSD"][0] or massVal > config.analysis_parameters[jet_type]["MSD"][1]:
+                    histogram.SetBinError(i, j, 0.)
+                if massVal < mass_range[0] or massVal > mass_range[1]:
+                    if "data_obs" in histogram.GetName():
+                        print "[debug] ZERO: Setting hist {}, bin mSD={}/rho={}/pt={} to zero because of mSD cut".format(histogram.GetName(), massVal, rhoVal, ptVal)
                     histogram.SetBinContent(i, j, 0.)
+                    histogram.SetBinError(i, j, 0.)
                 if min_mass >= 0.:
                     if massVal < min_mass:
+                        if "data_obs" in histogram.GetName():
+                            print "[debug] ZERO: Setting hist {}, bin mSD={}/rho={}/pt={} to zero because of min_mass cut".format(histogram.GetName(), massVal, rhoVal, ptVal)
+
                         histogram.SetBinContent(i, j, 0.)
+                        histogram.SetBinError(i, j, 0.)
         histogram.SetDirectory(0)
     for syst in all_systematics:
         for direction in ["Up", "Down"]:
@@ -525,17 +528,21 @@ def LoadHistograms(input_file, interpolation_file, mass_range, rho_range, jet_ty
                                     print "blinding signal region for %s, mass bin [%i,%i] " % (
                                     histogram.GetName(), histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                                     histogram.SetBinContent(i, j, 0.)
+                                    histogram.SetBinError(i, j, 0.)
                             if rhoVal < rho_range[0] or rhoVal > rho_range[1]:
                                 #print "removing rho = %.2f for %s, pt bin [%i, %i], mass bin [%i,%i]" % (
                                 #    rhoVal, histogram.GetName(), histogram.GetYaxis().GetBinLowEdge(j),
                                 #    histogram.GetYaxis().GetBinUpEdge(j),
                                 #    histogram.GetXaxis().GetBinLowEdge(i), histogram.GetXaxis().GetBinUpEdge(i))
                                 histogram.SetBinContent(i, j, 0.)
-                            if massVal < config.analysis_parameters[jet_type]["MSD"][0] or massVal > config.analysis_parameters[jet_type]["MSD"][1]:
+                                histogram.SetBinError(i, j, 0.)
+                            if massVal < mass_range[0] or massVal > mass_range[1]:
                                 histogram.SetBinContent(i, j, 0.)
+                                histogram.SetBinError(i, j, 0.)
                             if min_mass >= 0.:
                                 if massVal < min_mass:
                                     histogram.SetBinContent(i, j, 0.)
+                                    histogram.SetBinError(i, j, 0.)
                     histogram.SetDirectory(0)
 
 
@@ -554,10 +561,15 @@ def main(options, args):
     # Load the input histograms
     # 	- 2D histograms of pass and fail mass,pT distributions
     # 	- for each MC sample and the data
-    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, config.analysis_parameters[options.jet_type]["MSD"], config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
+    if options.jet_type == "CA15" and options.region == "N2SR":
+        print "[debug] Setting mass range to [68, 600] for N2SR"
+        mass_range = [68., 600.]
+    else:
+        mass_range = config.analysis_parameters[options.jet_type]["MSD"]
+    (pass_hists,fail_hists, pass_hists_syst, fail_hists_syst, all_systematics) = LoadHistograms(input_file, interpolation_file, mass_range, config.analysis_parameters[options.jet_type]["RHO"], useQCD=options.useQCD, jet_type=options.jet_type, scale=options.scale, r_signal=options.r, pseudo=options.pseudo, do_shift=True, decidata=options.decidata, region=options.region)
 
     # MSD bins: restricted=mass_nbins=config.analysis_parameters[options.jet_type]["MASS_BINS"], mass_lo=config.analysis_parameters[options.jet_type]["MSD"][0], mass_hi=config.analysis_parameters[options.jet_type]["MSD"][1], full = 80, 40, 600
-    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=80, mass_lo=40., mass_hi=600., rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
+    rhalphabuilder = RhalphabetBuilder(pass_hists, fail_hists, input_file, odir, nr=config.analysis_parameters[options.jet_type]["MAX_NRHO"], np=config.analysis_parameters[options.jet_type]["MAX_NPT"], mass_nbins=80, mass_lo=40, mass_hi=600, rho_lo=config.analysis_parameters[options.jet_type]["RHO"][0], rho_hi=config.analysis_parameters[options.jet_type]["RHO"][1], mass_fit=options.massfit, freeze_poly=options.freeze, quiet=True, signal_names=config.limit_signal_names[options.jet_type])
     rhalphabuilder.add_systematics(all_systematics, pass_hists_syst, fail_hists_syst)
     rhalphabuilder.run()
     if options.addHptShape:
@@ -570,7 +582,10 @@ def main(options, args):
                 if irho ==0 and ipt == 0:
                     continue
                 fix_pars_rhalphabet["r{}p{}".format(irho, ipt)] = 0.
-        rhalphabuilder.prefit(fix_pars_rhalphabet=fix_pars_rhalphabet, category_indices=config.analysis_parameters[options.jet_type]["FIT_PT_BINS"])
+        cats = config.analysis_parameters[options.jet_type]["FIT_PT_BINS"]
+        #if options.region == "N2SR":
+        #    cats = [1,2,3,4,5,6]
+        rhalphabuilder.prefit(fix_pars_rhalphabet=fix_pars_rhalphabet, category_indices=cats)
 
     # Copy outputs to subdirectories
     for signal_name in config.limit_signal_names[options.jet_type]:
@@ -610,7 +625,7 @@ if __name__ == '__main__':
     parser.add_option('--prefit', action='store_true', dest='prefit', default =False,help='do prefit', metavar='prefit')
     parser.add_option('-r', dest='r', default=0, type='float', help='signal strength for MC pseudodataset')
     parser.add_option('--addHptShape',action='store_true',dest='addHptShape',default =False,help='add H pt shape unc', metavar='addHptShape')
-    parser.add_option('--region', type=str, default="SR", help="SR or N2CR", dest="region")
+    parser.add_option('--region', type=str, default="SR", help="SR, N2SR, or N2CR", dest="region")
     (options, args) = parser.parse_args()
 
     main(options, args)
